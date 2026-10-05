@@ -14,14 +14,18 @@ export const signinInput = z.object({
 
 
 export const createBlogInput = z.object({
-    title: z.string(),
-    content: z.string()
+    title: z.string().trim().min(3).max(160),
+    content: z.string().trim().min(20).max(50000),
+    excerpt: z.string().trim().max(280).optional(),
+    tags: z.array(z.string().trim().min(1).max(30)).max(3).optional()
 })
     
     
 export const updateBlogInput = z.object({
-        title: z.string(),
-        content: z.string(),
+        title: z.string().trim().min(3).max(160),
+        content: z.string().trim().min(20).max(50000),
+        excerpt: z.string().trim().max(280).optional(),
+        tags: z.array(z.string().trim().min(1).max(30)).max(3).optional(),
         id: z.string()
 })
         

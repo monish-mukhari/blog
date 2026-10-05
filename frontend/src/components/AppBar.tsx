@@ -1,16 +1,6 @@
-import { Link } from "react-router-dom"
-import { Avatar } from "./BlogCard"
+import { useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Icon } from './Icon';
 
-export const AppBar = () => {
-    return <div className="flex justify-between border-b px-10 py-4">
-        <Link to={'/blogs'} className="flex flex-col justify-center font-semibold cursor-pointer">
-            Medium
-        </Link>
-        <div>
-            <Link to={'/publish'}>
-                <button type="button" className="mr-4 text-white bg-green-700 hover:bg-green-800 focus:outline-none focus:ring-4 focus:ring-green-300 font-medium rounded-full text-sm px-5 py-2.5 text-center me-2 mb-2">New</button>
-            </Link>
-            <Avatar size="big" name="Monish M" />
-        </div>
-    </div>
-}
+export const AppBar=({search,onSearch}:{search?:string;onSearch?:(value:string)=>void})=>{const[menuOpen,setMenuOpen]=useState(false);const navigate=useNavigate();useEffect(()=>{document.documentElement.classList.remove('dark');localStorage.setItem('theme','light')},[]);const signOut=()=>{localStorage.removeItem('token');navigate('/signin')};return <header className="sticky top-0 z-40 border-b border-[var(--line)] bg-white/95 backdrop-blur-xl"><div className="container-main flex h-[72px] items-center justify-between gap-5"><Link to="/blogs" className="focus-ring flex items-center gap-2 rounded-lg" aria-label="Inkwell home"><span className="grid h-9 w-9 place-items-center rounded-lg bg-[#2563eb] text-xl font-bold text-white font-display">i.</span><span className="font-display text-2xl font-bold tracking-tight">inkwell</span></Link>{onSearch&&<div className="hidden max-w-md flex-1 md:block"><label className="relative block"><span className="absolute inset-y-0 left-4 flex items-center text-[var(--muted)]"><Icon name="search" size={18}/></span><input value={search} onChange={e=>onSearch(e.target.value)} className="w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] py-2.5 pl-11 pr-4 text-sm outline-none transition focus:border-[#2563eb] focus:bg-white" placeholder="Search stories, ideas, writers..." aria-label="Search stories"/></label></div>}<div className="flex items-center gap-2"><Link to="/publish" className="focus-ring hidden items-center gap-2 rounded-lg bg-[#2563eb] px-5 py-2.5 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-[#1d4ed8] sm:flex"><Icon name="write" size={17}/>Write</Link><button onClick={()=>setMenuOpen(!menuOpen)} className="focus-ring grid h-10 w-10 place-items-center rounded-lg border border-[var(--line)] bg-white text-[#2563eb]" aria-label="Open profile menu"><Icon name={menuOpen?'close':'user'} size={18}/></button></div></div>{menuOpen&&<div className="absolute right-5 top-[64px] w-52 rounded-xl border border-[var(--line)] bg-white p-2 shadow-xl animate-in"><Link to="/publish" className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm hover:bg-[var(--surface)] sm:hidden"><Icon name="write" size={17}/>Write a story</Link><Link to="/blogs?view=saved" className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm hover:bg-[var(--surface)]"><Icon name="bookmark" size={17}/>Saved stories</Link><button onClick={signOut} className="mt-1 w-full border-t border-[var(--line)] px-3 pt-3 text-left text-sm text-[#1d4ed8]">Sign out</button></div>}{onSearch&&<div className="container-main pb-3 md:hidden"><label className="relative block"><span className="absolute inset-y-0 left-4 flex items-center text-[var(--muted)]"><Icon name="search" size={17}/></span><input value={search} onChange={e=>onSearch(e.target.value)} className="w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] py-2.5 pl-11 pr-4 text-sm outline-none" placeholder="Search stories..." aria-label="Search stories"/></label></div>}</header>}
+export const LogoBar=()=> <div className="absolute left-6 top-6 z-10"><Link to="/" className="flex items-center gap-2"><span className="grid h-9 w-9 place-items-center rounded-lg bg-[#2563eb] text-xl font-bold text-white font-display">i.</span><span className="font-display text-2xl font-bold">inkwell</span></Link></div>

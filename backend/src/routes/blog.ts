@@ -1,156 +1,25 @@
-import { Hono } from "hono";
-import { verify } from "hono/jwt";
-import { PrismaClient } from "@prisma/client/edge";
-import { withAccelerate } from "@prisma/extension-accelerate";
-import { createBlogInput, updateBlogInput } from "@monish21/medium-common"; 
+import { PrismaClient } from '@prisma/client/edge';
+import { withAccelerate } from '@prisma/extension-accelerate';
+import { Hono } from 'hono';
+import { verify } from 'hono/jwt';
+import { createBlogInput, updateBlogInput } from '@monish21/medium-common';
 
-export const blogRouter = new Hono<{
-    Bindings: {
-        DATABASE_URL: string,
-        JWT_SECRET: string
-    },
-    Variables: {
-        userId: string
-    }
-}>();
+type Env={Bindings:{DATABASE_URL:string;JWT_SECRET:string};Variables:{userId:string}};
+export const blogRouter=new Hono<Env>();
+const db=(url:string)=>new PrismaClient({datasourceUrl:url}).$extends(withAccelerate());
 
-blogRouter.use('/*', async (c, next) => {
-	const jwt = c.req.header('Authorization') || "";
-	if (!jwt) {
-		c.status(401);
-		return c.json({ error: "unauthorized" });
-	}
-	const token = jwt.split(' ')[1];
-    try {
-        const payload = await verify(token, c.env.JWT_SECRET);
-	if (payload) {
-        //@ts-ignore
-		c.set("userId", payload.id);
-	    await next()
-	} else {
-        c.status(401);
-		return c.json({ error: "unauthorized" });
-    }
-    
-    } catch(e) {
-        c.status(401);
-		return c.json({ error: "unauthorized" });
-    }
-})
+blogRouter.use('/*',async(context,next)=>{const header=context.req.header('Authorization')||'';const token=header.startsWith('Bearer ')?header.slice(7):'';if(!token)return context.json({error:'Unauthorized'},401);try{const payload=await verify(token,context.env.JWT_SECRET,'HS256');if(!payload.id||typeof payload.id!=='string')return context.json({error:'Unauthorized'},401);context.set('userId',payload.id);await next()}catch{return context.json({error:'Your session has expired. Please sign in again.'},401)}});
 
+blogRouter.post('/',async context=>{const prisma=db(context.env.DATABASE_URL);const body=await context.req.json();const parsed=createBlogInput.safeParse(body);if(!parsed.success||parsed.data.title.trim().length<3||parsed.data.title.length>160||parsed.data.content.trim().length<20||parsed.data.content.length>50_000)return context.json({error:'Use a title between 3 and 160 characters and story content between 20 and 50,000 characters.'},400);const blog=await prisma.post.create({data:{title:parsed.data.title.trim(),content:parsed.data.content.trim(),excerpt:typeof body.excerpt==='string'?body.excerpt.trim().slice(0,280):null,tags:Array.isArray(body.tags)?body.tags.slice(0,3).map((tag:unknown)=>String(tag).trim().slice(0,30)).filter(Boolean):[],published:true,authorId:context.get('userId')}});return context.json({id:blog.id},201)});
 
-blogRouter.post('/', async (c) => {
-	const prisma = new PrismaClient({
-        datasourceUrl: c.env.DATABASE_URL,
-    }).$extends(withAccelerate());
-    const body = await c.req.json();
-    const {success} = createBlogInput.safeParse(body);
-    if(!success) {
-        c.status(411);
-        return c.json({
-            message: "Inputs are not correct"
-        })
-    }
-    const userId = c.get("userId");
+blogRouter.put('/',async context=>{const prisma=db(context.env.DATABASE_URL);const body=await context.req.json();const parsed=updateBlogInput.safeParse(body);if(!parsed.success||parsed.data.title.trim().length<3||parsed.data.title.length>160||parsed.data.content.trim().length<20||parsed.data.content.length>50_000)return context.json({error:'Invalid story content.'},400);const result=await prisma.post.updateMany({where:{id:parsed.data.id,authorId:context.get('userId')},data:{title:parsed.data.title.trim(),content:parsed.data.content.trim(),excerpt:typeof body.excerpt==='string'?body.excerpt.trim().slice(0,280):undefined,tags:Array.isArray(body.tags)?body.tags.slice(0,3).map((tag:unknown)=>String(tag).trim().slice(0,30)).filter(Boolean):undefined}});if(!result.count)return context.json({error:'Story not found or you do not have permission to edit it.'},404);return context.json({message:'Story updated'})});
 
-    const blog = await prisma.post.create({
-        data: {
-            title: body.title,
-            content: body.content,
-            authorId: userId,
-        }
-    })
-    return c.json({
-        id: blog.id
-    })
-})
+blogRouter.get('/bulk',async context=>{const prisma=db(context.env.DATABASE_URL);const userId=context.get('userId');const blogs=await prisma.post.findMany({where:{published:true},orderBy:{createdAt:'desc'},select:{content:true,title:true,id:true,excerpt:true,tags:true,createdAt:true,author:{select:{id:true,name:true}},bookmarks:{where:{userId},select:{userId:true}},claps:{where:{userId},select:{userId:true}},_count:{select:{claps:true}}}});return context.json({blogs:blogs.map(({bookmarks,claps,_count,...blog})=>({...blog,saved:bookmarks.length>0,liked:claps.length>0,clapCount:_count.claps}))})});
 
-blogRouter.put('/', async (c) => {
-    const userId = c.get('userId');
-    const prisma = new PrismaClient({
-		datasourceUrl: c.env?.DATABASE_URL	,
-	}).$extends(withAccelerate());
+blogRouter.post('/:id/bookmark',async context=>{const prisma=db(context.env.DATABASE_URL);const userId=context.get('userId');const postId=context.req.param('id');const body=await context.req.json<{saved?:boolean}>();if(typeof body.saved!=='boolean')return context.json({error:'A saved state is required.'},400);const post=await prisma.post.findFirst({where:{id:postId,published:true},select:{id:true}});if(!post)return context.json({error:'Story not found.'},404);if(body.saved)await prisma.bookmark.upsert({where:{userId_postId:{userId,postId}},create:{userId,postId},update:{}});else await prisma.bookmark.deleteMany({where:{userId,postId}});return context.json({saved:body.saved})});
 
-    const body = await c.req.json();
-    const {success} = updateBlogInput.safeParse(body);
-    if(!success) {
-        c.status(411);
-        return c.json({
-            message: "Inputs are not correct"
-        })
-    }
-    await prisma.post.update({
-		where: {
-			id: body.id,
-			authorId: userId
-		},
-		data: {
-			title: body.title,
-			content: body.content
-		}
-	});
+blogRouter.post('/:id/clap',async context=>{const prisma=db(context.env.DATABASE_URL);const userId=context.get('userId');const postId=context.req.param('id');const body=await context.req.json<{liked?:boolean}>();if(typeof body.liked!=='boolean')return context.json({error:'A liked state is required.'},400);const post=await prisma.post.findFirst({where:{id:postId,published:true},select:{id:true}});if(!post)return context.json({error:'Story not found.'},404);if(body.liked)await prisma.clap.upsert({where:{userId_postId:{userId,postId}},create:{userId,postId},update:{}});else await prisma.clap.deleteMany({where:{userId,postId}});const clapCount=await prisma.clap.count({where:{postId}});return context.json({liked:body.liked,clapCount})});
 
-	return c.json({message: 'updated post'});
-  })
-  
-blogRouter.get('/bulk', async (c) => {
-    const prisma = new PrismaClient({
-        datasourceUrl: c.env.DATABASE_URL,
-    }).$extends(withAccelerate());
+blogRouter.post('/author/:id/follow',async context=>{const prisma=db(context.env.DATABASE_URL);const followerId=context.get('userId');const followingId=context.req.param('id');const body=await context.req.json<{followed?:boolean}>();if(typeof body.followed!=='boolean')return context.json({error:'A followed state is required.'},400);if(followerId===followingId)return context.json({error:'You cannot follow yourself.'},400);const author=await prisma.user.findUnique({where:{id:followingId},select:{id:true}});if(!author)return context.json({error:'Author not found.'},404);if(body.followed)await prisma.follow.upsert({where:{followerId_followingId:{followerId,followingId}},create:{followerId,followingId},update:{}});else await prisma.follow.deleteMany({where:{followerId,followingId}});const followerCount=await prisma.follow.count({where:{followingId}});return context.json({followed:body.followed,followerCount})});
 
-    const blogs = await prisma.post.findMany({
-        select: {
-            content: true,
-            title: true,
-            id: true,
-            author: {
-                select: {
-                    name: true
-                }
-            }
-        }
-
-    });
-    return c.json({
-        blogs
-    })
-}) 
-
-blogRouter.get('/:id', async (c) => {
-    const blogId = c.req.param("id");
-    const prisma = new PrismaClient({
-        datasourceUrl: c.env.DATABASE_URL,
-    }).$extends(withAccelerate());
-    
-    try {
-        
-        const blog = await prisma.post.findFirst({
-            where: {
-                id: blogId
-            },
-            select: {
-                id: true,
-                title: true,
-                content: true,
-                author: {
-                    select: {
-                        name: true
-                    }
-                }
-            }
-        })
-
-        return c.json({
-            blog
-        })
-    } catch(e) {
-        c.status(411);
-        
-        return c.json({
-            message: "Error while fetching blog post"
-        })
-    }
-  })
-  
-  
-  
+blogRouter.get('/:id',async context=>{const prisma=db(context.env.DATABASE_URL);const userId=context.get('userId');const blog=await prisma.post.findFirst({where:{id:context.req.param('id'),published:true},select:{id:true,title:true,content:true,excerpt:true,tags:true,createdAt:true,author:{select:{id:true,name:true,followers:{where:{followerId:userId},select:{followerId:true}},_count:{select:{followers:true}}}},bookmarks:{where:{userId},select:{userId:true}},claps:{where:{userId},select:{userId:true}},_count:{select:{claps:true}}}});if(!blog)return context.json({error:'Story not found.'},404);const{bookmarks,claps,_count,author,...story}=blog;return context.json({blog:{...story,saved:bookmarks.length>0,liked:claps.length>0,clapCount:_count.claps,author:{id:author.id,name:author.name,followed:author.followers.length>0,followerCount:author._count.followers}}})});

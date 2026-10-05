@@ -1,9 +1,9 @@
 name = "backend"
 compatibility_date = "2023-12-01"
+keep_vars = true
 
-[vars]
-DATABASE_URL=""
-JWT_SECRET=""
+# DATABASE_URL and JWT_SECRET are encrypted Worker secrets.
+# Configure them with `npx wrangler secret put <NAME>`; never commit them here.
 
 # [vars]
 # MY_VAR = "my-variable"

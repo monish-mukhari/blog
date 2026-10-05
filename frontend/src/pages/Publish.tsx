@@ -1,54 +1,13 @@
-import axios from "axios";
-import { AppBar } from "../components/AppBar"
-import { BACKEND_URL } from "../config";
-import { ChangeEvent, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import axios from 'axios';
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { AppBar } from '../components/AppBar';
+import { Icon } from '../components/Icon';
+import { BACKEND_URL } from '../config';
+import { readTime } from '../lib/blog';
 
-export const Publish = () => {
-    const [title, setTitle] = useState("");
-    const [description, setDescription] = useState("");
-    const navigate = useNavigate();
+const topics=['Design','Technology','Culture','Work','Life'];
+type Draft={title:string;excerpt:string;content:string;topic:string};
+const loadDraft=():Draft=>{try{const value=localStorage.getItem('inkwell-draft');if(value){const parsed=JSON.parse(value) as Partial<Draft>;return{title:parsed.title||'',excerpt:parsed.excerpt||'',content:parsed.content||'',topic:topics.includes(parsed.topic||'')?parsed.topic!:'Design'}}}catch{localStorage.removeItem('inkwell-draft')}return{title:'',excerpt:'',content:'',topic:'Design'}};
 
-    return <div>
-        <AppBar />
-        <div className="flex justify-center pt-8">
-            <div className="max-w-screen-lg w-full">
-                <input onChange={(e) => {
-                    setTitle(e.target.value)
-                }} type="text" aria-describedby="helper-text-explanation" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" placeholder="Title" />
-
-                <TextEditor onChange={(e) => {
-                    setDescription(e.target.value)
-                }} />
-                <button onClick={async () => {
-                    const response = await axios.post(`${BACKEND_URL}/api/v1/blog`, {
-                        title,
-                        content: description,
-
-                    }, {
-                        headers: {
-                            Authorization: `Bearer ${localStorage.getItem("token")}`
-                        }
-                    });
-                    navigate(`/blog/${response.data.id}`)
-                }} type="submit" className="mt-4 inline-flex items-center px-5 py-2.5 text-sm font-medium text-center text-white bg-blue-700 rounded-lg focus:ring-4 focus:ring-blue-200 dark:focus:ring-blue-900 hover:bg-blue-800">
-                    Publish post
-                </button>
-            </div>
-        </div>
-    </div>
-}
-
-function TextEditor({ onChange }: { onChange: (e: ChangeEvent<HTMLTextAreaElement>) => void }) {
-    return <div className="mt-2">
-   <div className="w-full mb-4">
-       <div className="flex items-center justify-between border">     
-       <div className="my-2 bg-white rounded-b-lg w-full">
-           <label className="sr-only">Publish post</label>
-           <textarea onChange={onChange} id="editor" rows={8} className="focus:outline-none pl-2 block w-full px-0 text-sm text-gray-800 bg-white border-0" placeholder="Write an article..." required ></textarea>
-       </div>
-   </div>
-   
-   </div>
-</div>
-}
+export const Publish=()=>{const initial=useMemo(loadDraft,[]);const[title,setTitle]=useState(initial.title);const[excerpt,setExcerpt]=useState(initial.excerpt);const[content,setContent]=useState(initial.content);const[topic,setTopic]=useState(initial.topic);const[status,setStatus]=useState(initial.title||initial.content?'Draft restored':'Not saved yet');const[publishing,setPublishing]=useState(false);const[error,setError]=useState('');const navigate=useNavigate();const words=useMemo(()=>content.trim()?content.trim().split(/\s+/).length:0,[content]);const saveDraft=()=>{localStorage.setItem('inkwell-draft',JSON.stringify({title,excerpt,content,topic}));setStatus('Saved just now')};useEffect(()=>{if(!title&&!excerpt&&!content)return;setStatus('Saving…');const timer=window.setTimeout(()=>{localStorage.setItem('inkwell-draft',JSON.stringify({title,excerpt,content,topic}));setStatus('Saved just now')},700);return()=>window.clearTimeout(timer)},[title,excerpt,content,topic]);const discard=()=>{localStorage.removeItem('inkwell-draft');setTitle('');setExcerpt('');setContent('');setTopic('Design');setStatus('Draft discarded');setError('')};const publish=async()=>{if(title.trim().length<3||content.trim().length<20){setError('Add a clear title and at least a few sentences before publishing.');return}setPublishing(true);setError('');try{const response=await axios.post(`${BACKEND_URL}/api/v1/blog`,{title:title.trim(),excerpt:excerpt.trim(),content:content.trim(),tags:[topic]},{headers:{Authorization:`Bearer ${localStorage.getItem('token')}`}});localStorage.removeItem('inkwell-draft');navigate(`/blog/${response.data.id}`)}catch(err){if(axios.isAxiosError(err)&&err.response?.status===401){localStorage.removeItem('token');navigate('/signin');return}setError('We could not publish your story. Check your connection and try again.')}finally{setPublishing(false)}};return <div className="page-shell"><AppBar/><main className="container-main max-w-5xl py-10"><div className="mb-9 flex flex-col justify-between gap-4 border-b border-[var(--line)] pb-6 sm:flex-row sm:items-center"><div><p className="text-xs font-bold uppercase tracking-[.15em] text-[#2563eb]">New story</p><p className="mt-1 text-sm text-[var(--muted)]">{status} · {words} words · {readTime(content)} min read</p></div><div className="flex flex-wrap gap-3">{(title||excerpt||content)&&<button onClick={discard} className="rounded-lg px-4 py-2.5 text-sm font-semibold text-[var(--muted)] hover:bg-[#eff6ff]">Discard</button>}<button onClick={saveDraft} className="rounded-lg border border-[var(--line)] px-5 py-2.5 text-sm font-semibold">Save draft</button><button onClick={publish} disabled={publishing} className="flex items-center gap-2 rounded-lg bg-[#2563eb] px-5 py-2.5 text-sm font-semibold text-white disabled:cursor-wait disabled:opacity-60">{publishing?'Publishing…':'Publish'}{!publishing&&<Icon name="arrow" size={17}/>}</button></div></div><section className="rounded-[24px] border border-[var(--line)] bg-[var(--surface)] p-6 sm:p-10"><div className="flex gap-2 overflow-x-auto pb-7">{topics.map(item=><button key={item} onClick={()=>setTopic(item)} className={`rounded-lg px-4 py-2 text-xs font-bold ${topic===item?'bg-[#2563eb] text-white':'bg-white text-[var(--muted)]'}`}>{item}</button>)}</div><label className="sr-only" htmlFor="story-title">Story title</label><textarea id="story-title" value={title} maxLength={160} onChange={event=>setTitle(event.target.value)} rows={2} className="w-full resize-none bg-transparent font-display text-5xl font-semibold leading-[1.02] tracking-[-.03em] outline-none placeholder:text-[var(--muted)]/45 md:text-6xl" placeholder="Give your story a title…"/><label className="sr-only" htmlFor="story-excerpt">Story summary</label><textarea id="story-excerpt" value={excerpt} maxLength={280} onChange={event=>setExcerpt(event.target.value)} rows={2} className="mt-5 w-full resize-none bg-transparent text-lg leading-8 text-[var(--muted)] outline-none placeholder:text-[var(--muted)]/55" placeholder="A short hook to invite readers in (optional)…"/><div className="my-8 h-px bg-[var(--line)]"/><label className="sr-only" htmlFor="story-body">Story content</label><textarea id="story-body" value={content} maxLength={50000} onChange={event=>setContent(event.target.value)} rows={16} className="article-body min-h-[480px] w-full resize-none bg-transparent outline-none placeholder:text-[var(--muted)]/45" placeholder="Tell your story…"/>{error&&<div role="alert" className="mt-5 rounded-lg border border-[#bfdbfe] bg-[#eff6ff] p-4 text-sm text-[#1d4ed8]">{error}</div>}</section><p className="mt-5 text-center text-xs text-[var(--muted)]">Your draft autosaves on this device as you write.</p></main></div>};

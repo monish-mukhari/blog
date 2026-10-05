@@ -1,0 +1,2 @@
+import { Link } from 'react-router-dom';
+export const NotFound=()=> <div className="page-shell grid min-h-screen place-items-center px-6 text-center"><div><p className="font-display text-8xl font-semibold text-[#2563eb]">404</p><h1 className="mt-3 font-display text-4xl font-semibold">This page wandered off.</h1><p className="mt-3 text-[var(--muted)]">The address may be incorrect, or the page may have moved.</p><Link to="/" className="mt-7 inline-block rounded-lg bg-[#2563eb] px-6 py-3 text-sm font-semibold text-white">Return home</Link></div></div>
