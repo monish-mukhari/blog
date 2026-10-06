@@ -9,5 +9,5 @@ app.get('/health',context=>context.json({status:'ok'}));
 app.route('/api/v1/user',userRouter);
 app.route('/api/v1/blog',blogRouter);
 app.notFound(context=>context.json({error:'Not found'},404));
-app.onError((_error,context)=>context.json({error:'Internal server error'},500));
+app.onError((error,context)=>{console.error('unhandled_request_error',{name:error.name,message:error.message,stack:error.stack,path:context.req.path});return context.json({error:'Internal server error'},500)});
 export default app;

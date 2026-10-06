@@ -1,7 +1,7 @@
 {
   "scripts": {
     "dev": "wrangler dev src/index.ts",
-    "deploy": "wrangler deploy --minify src/index.ts"
+    "deploy": "prisma generate --no-engine && wrangler deploy --minify src/index.ts"
   },
   "dependencies": {
     "@monish21/medium-common": "^1.0.0",

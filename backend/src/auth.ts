@@ -1,5 +1,6 @@
 const encoder=new TextEncoder();
-const ITERATIONS=120_000;
+// Cloudflare Workers Web Crypto supports PBKDF2 iteration counts up to 100,000.
+const ITERATIONS=100_000;
 const bytesToBase64=(bytes:Uint8Array)=>{let value='';for(const byte of bytes)value+=String.fromCharCode(byte);return btoa(value)};
 const base64ToBytes=(value:string)=>Uint8Array.from(atob(value),character=>character.charCodeAt(0));
 const derive=async(password:string,salt:Uint8Array,iterations:number)=>{const key=await crypto.subtle.importKey('raw',encoder.encode(password),'PBKDF2',false,['deriveBits']);const bits=await crypto.subtle.deriveBits({name:'PBKDF2',hash:'SHA-256',salt,iterations},key,256);return new Uint8Array(bits)};
