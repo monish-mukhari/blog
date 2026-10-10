@@ -1,2 +1,38 @@
-import { Link, useParams } from 'react-router-dom';import { AppBar } from '../components/AppBar';import { FullBlog } from '../components/FullBlog';import { Spinner } from '../components/Spinner';import { useBlog } from '../hooks';
-export const Blog=()=>{const{id}=useParams();const{loading,blog,error}=useBlog({id:id||''});if(loading)return <div className="page-shell"><AppBar/><div className="grid min-h-[70vh] place-items-center"><Spinner/></div></div>;if(error||!blog)return <div className="page-shell"><AppBar/><div className="container-main grid min-h-[70vh] place-items-center text-center"><div><p className="font-display text-8xl font-semibold text-[#ff674d]">404</p><h1 className="mt-3 font-display text-4xl font-semibold">This story wandered off.</h1><p className="mt-3 text-[var(--muted)]">{error||'It may have been moved or removed.'}</p><Link to="/blogs" className="mt-7 inline-block rounded-full bg-[var(--ink)] px-6 py-3 text-sm font-semibold text-[var(--paper)]">Back to stories</Link></div></div></div>;return <FullBlog blog={blog}/>}
+import { Link, useParams } from 'react-router-dom';
+import { AppBar } from '../components/AppBar';
+import { FullBlog } from '../components/FullBlog';
+import { Spinner } from '../components/Spinner';
+import { useBlog } from '../hooks';
+export const Blog = () => {
+  const { id } = useParams();
+  const { loading, blog, error } = useBlog({ id: id || '' });
+  if (loading)
+    return (
+      <div className="page-shell">
+        <AppBar />
+        <div className="grid min-h-[70vh] place-items-center">
+          <Spinner />
+        </div>
+      </div>
+    );
+  if (error || !blog)
+    return (
+      <div className="page-shell">
+        <AppBar />
+        <div className="container-main grid min-h-[70vh] place-items-center text-center">
+          <div>
+            <p className="font-display text-8xl font-semibold text-[#ff674d]">404</p>
+            <h1 className="mt-3 font-display text-4xl font-semibold">This story wandered off.</h1>
+            <p className="mt-3 text-[var(--muted)]">{error || 'It may have been moved or removed.'}</p>
+            <Link
+              to="/blogs"
+              className="mt-7 inline-block rounded-full bg-[var(--ink)] px-6 py-3 text-sm font-semibold text-[var(--paper)]"
+            >
+              Back to stories
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  return <FullBlog blog={blog} />;
+};

@@ -15,11 +15,13 @@ Inkwell is a full-stack publishing platform for reading, writing, and sharing th
 - Seven-day JWT authentication
 - Story publishing with titles, summaries, topics, and reading-time estimates
 - Automatic local draft saving and restoration
+- Account-synced drafts with an author story dashboard
 - Search and topic filtering
 - Account-synced bookmarks and a saved-story library
 - Account-synced appreciation counts
 - Author follow and unfollow support
 - Native sharing with clipboard fallback
+- Readable story URLs, dynamic article metadata, RSS, and sitemap support
 - Loading, empty, expired-session, error, and 404 states
 - Protected application routes
 - Light, accessible controls designed for desktop and mobile
@@ -119,7 +121,8 @@ cd backend
 npm run dev
 ```
 
-The frontend currently uses the deployed Worker URL from `frontend/src/config.ts`. Change that value temporarily if you want the browser to call a local Worker.
+Copy `frontend/.env.example` to `frontend/.env.local` to point the browser at a local Worker. The deployed
+Worker remains the fallback when `VITE_BACKEND_URL` is not set.
 
 Start the frontend in a second terminal:
 
@@ -137,6 +140,7 @@ Open `http://localhost:5173`.
 | `DATABASE_URL` | Prisma CLI | Direct Neon URL when applying migrations |
 | `DATABASE_URL` | Cloudflare Worker | Prisma Accelerate `prisma://` runtime URL |
 | `JWT_SECRET` | Cloudflare Worker | Secret used to sign and verify authentication tokens |
+| `FRONTEND_URL` | Cloudflare Worker | Deployed frontend origin used by the API CORS policy |
 
 Production variables should be configured as encrypted Cloudflare Worker secrets or dashboard-managed runtime variables. The repository sets `keep_vars = true`, so Wrangler deployments preserve variables managed in the Cloudflare dashboard.
 
@@ -148,6 +152,8 @@ Production variables should be configured as encrypted Cloudflare Worker secrets
 npm run dev       # Start Vite development server
 npm run build     # Type-check and create a production build
 npm run lint      # Run ESLint with zero warnings allowed
+npm run format    # Format frontend, backend, and shared TypeScript sources
+npm run format:check # Verify formatting without changing files
 npm run preview   # Preview the production build locally
 ```
 
@@ -155,6 +161,8 @@ npm run preview   # Preview the production build locally
 
 ```bash
 npm run dev       # Start the Worker locally with Wrangler
+npm run test      # Run backend unit and route tests
+npm run typecheck # Type-check the Worker without emitting files
 npm run deploy    # Generate the engine-free Prisma client and deploy
 ```
 
@@ -165,15 +173,28 @@ npm run deploy    # Generate the engine-free Prisma client and deploy
 | `GET` | `/health` | Worker health check |
 | `POST` | `/api/v1/user/signup` | Create an account |
 | `POST` | `/api/v1/user/signin` | Authenticate an account |
-| `GET` | `/api/v1/blog/bulk` | List published stories |
+| `GET` | `/api/v1/blog/bulk` | List published stories with pagination, search, topic, and saved filters |
 | `GET` | `/api/v1/blog/:id` | Read one published story |
 | `POST` | `/api/v1/blog` | Publish a story |
 | `PUT` | `/api/v1/blog` | Update an owned story |
+| `POST` | `/api/v1/blog/drafts` | Create or update an account-synced draft |
+| `GET` | `/api/v1/blog/drafts/:id` | Load an owned draft |
+| `GET` | `/api/v1/blog/mine` | List the current author's drafts and stories |
+| `POST` | `/api/v1/blog/:id/publish` | Publish an owned draft |
+| `DELETE` | `/api/v1/blog/:id` | Delete an owned draft or story |
 | `POST` | `/api/v1/blog/:id/bookmark` | Save or unsave a story |
 | `POST` | `/api/v1/blog/:id/clap` | Add or remove appreciation |
 | `POST` | `/api/v1/blog/author/:id/follow` | Follow or unfollow an author |
 
-All blog routes require an `Authorization: Bearer <token>` header.
+Published story list and detail routes are public. Supplying an optional `Authorization: Bearer <token>` header
+adds the current reader's bookmark, appreciation, and follow state. Publishing and interaction routes require a
+valid token.
+
+The list route accepts `page`, `limit` (maximum 24), `search`, `topic`, and `saved=true` query parameters.
+The saved filter requires authentication.
+
+The Worker also serves `/sitemap.xml`, `/rss.xml`, and crawler-friendly `/share/:slug` pages. New public
+stories use `/story/:slug`; existing `/blog/:id` links remain supported.
 
 ## Deploy the backend to Cloudflare Workers
 

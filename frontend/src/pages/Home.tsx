@@ -1,4 +1,114 @@
 import { Link } from 'react-router-dom';
 import { Icon } from '../components/Icon';
 
-export const Home=()=> <div className="page-shell overflow-hidden"><header className="container-main flex h-20 items-center justify-between"><Link to="/" className="flex items-center gap-2"><span className="grid h-9 w-9 place-items-center rounded-lg bg-[#2563eb] text-xl font-bold text-white font-display">i.</span><span className="font-display text-2xl font-bold">inkwell</span></Link><nav className="flex items-center gap-3"><Link to="/signin" className="hidden rounded-lg px-4 py-2 text-sm font-semibold hover:bg-[#eff6ff] sm:block">Sign in</Link><Link to="/signup" className="rounded-lg bg-[#2563eb] px-5 py-2.5 text-sm font-semibold text-white">Start writing</Link></nav></header><main><section className="container-main grid min-h-[calc(100vh-80px)] items-center gap-10 py-14 lg:grid-cols-[1.08fr_.92fr]"><div className="animate-in"><div className="mb-6 inline-flex items-center gap-2 rounded-lg border border-[#bfdbfe] bg-[#eff6ff] px-4 py-2 text-xs font-bold uppercase tracking-[.15em] text-[#2563eb]"><Icon name="spark" size={15}/>A home for human ideas</div><h1 className="font-display text-[clamp(4rem,9vw,8.5rem)] font-semibold leading-[.82] tracking-[-.055em]">Think it.<br/><span className="italic text-[#2563eb]">Ink it.</span><br/>Share it.</h1><p className="mt-8 max-w-xl text-lg leading-8 text-[var(--muted)]">A thoughtful space to read deeply, write honestly, and find ideas that stay with you long after the tab is closed.</p><div className="mt-9 flex flex-wrap gap-3"><Link to="/signup" className="focus-ring inline-flex items-center gap-3 rounded-lg bg-[#2563eb] px-7 py-3.5 font-semibold text-white transition hover:-translate-y-1 hover:bg-[#1d4ed8]">Join the conversation <Icon name="arrow"/></Link><Link to="/signin" className="focus-ring rounded-lg border border-[#93b4ef] bg-white px-7 py-3.5 font-semibold text-[#1d4ed8] hover:bg-[#eff6ff]">Explore stories</Link></div><div className="mt-12 flex items-center gap-5 text-sm text-[var(--muted)]"><div className="flex -space-x-2">{['#1d4ed8','#3b82f6','#1e40af'].map((color,index)=><span key={color} className="grid h-9 w-9 place-items-center rounded-full border-2 border-white text-xs font-bold text-white" style={{background:color}}>{['M','A','K'][index]}</span>)}</div><span><strong className="text-[var(--ink)]">Ideas have a place here.</strong><br/>Add yours to the mix.</span></div></div><div className="relative hidden min-h-[620px] lg:block"><div className="grain absolute inset-8 rotate-3 rounded-[34px] bg-[#2563eb]"/><div className="absolute left-0 top-24 w-[78%] -rotate-3 rounded-[20px] bg-white p-7 text-[#10213d] shadow-2xl"><p className="text-xs font-bold uppercase tracking-[.16em] text-[#2563eb]">Featured thought</p><h2 className="mt-5 font-display text-5xl font-semibold leading-[1.02]">The quiet art of paying attention.</h2><p className="mt-5 leading-7 text-[#64748b]">What we notice shapes what we make. A field guide to seeing the ordinary with new eyes.</p><div className="mt-8 flex items-center justify-between border-t border-[#d9e3f3] pt-5 text-sm"><span className="font-semibold">Maya Bennett</span><span className="text-[#64748b]">6 min read</span></div></div><div className="absolute bottom-12 right-0 w-64 rotate-6 rounded-[18px] border border-white/30 bg-[#1e40af] p-6 text-white shadow-2xl"><span className="font-display text-6xl">“</span><p className="font-display text-2xl leading-tight">Write what only you can write.</p><div className="mt-8 h-1 w-12 bg-white/70"/></div></div></section><section className="border-y border-[var(--line)] bg-[#f5f8ff]"><div className="container-main grid gap-8 py-16 md:grid-cols-3">{[['01','Read with intention','Thoughtful stories, curated for depth—not clicks.'],['02','Write without friction','A calm editor that keeps your words in focus.'],['03','Find your people','Follow ideas and voices that expand your world.']].map(([n,t,d])=><div key={n}><span className="text-sm font-bold text-[#2563eb]">{n}</span><h3 className="mt-4 font-display text-3xl font-semibold">{t}</h3><p className="mt-2 leading-7 text-[var(--muted)]">{d}</p></div>)}</div></section></main></div>
+export const Home = () => (
+  <div className="page-shell overflow-hidden">
+    <header className="container-main flex h-20 items-center justify-between">
+      <Link to="/" className="flex items-center gap-2">
+        <span className="grid h-9 w-9 place-items-center rounded-lg bg-[#2563eb] text-xl font-bold text-white font-display">
+          i.
+        </span>
+        <span className="font-display text-2xl font-bold">inkwell</span>
+      </Link>
+      <nav className="flex items-center gap-3">
+        <Link
+          to="/signin"
+          className="hidden rounded-lg px-4 py-2 text-sm font-semibold hover:bg-[#eff6ff] sm:block"
+        >
+          Sign in
+        </Link>
+        <Link to="/signup" className="rounded-lg bg-[#2563eb] px-5 py-2.5 text-sm font-semibold text-white">
+          Start writing
+        </Link>
+      </nav>
+    </header>
+    <main>
+      <section className="container-main grid min-h-[calc(100vh-80px)] items-center gap-10 py-14 lg:grid-cols-[1.08fr_.92fr]">
+        <div className="animate-in">
+          <div className="mb-6 inline-flex items-center gap-2 rounded-lg border border-[#bfdbfe] bg-[#eff6ff] px-4 py-2 text-xs font-bold uppercase tracking-[.15em] text-[#2563eb]">
+            <Icon name="spark" size={15} />A home for human ideas
+          </div>
+          <h1 className="font-display text-[clamp(4rem,9vw,8.5rem)] font-semibold leading-[.82] tracking-[-.055em]">
+            Think it.
+            <br />
+            <span className="italic text-[#2563eb]">Ink it.</span>
+            <br />
+            Share it.
+          </h1>
+          <p className="mt-8 max-w-xl text-lg leading-8 text-[var(--muted)]">
+            A thoughtful space to read deeply, write honestly, and find ideas that stay with you long after
+            the tab is closed.
+          </p>
+          <div className="mt-9 flex flex-wrap gap-3">
+            <Link
+              to="/signup"
+              className="focus-ring inline-flex items-center gap-3 rounded-lg bg-[#2563eb] px-7 py-3.5 font-semibold text-white transition hover:-translate-y-1 hover:bg-[#1d4ed8]"
+            >
+              Join the conversation <Icon name="arrow" />
+            </Link>
+            <Link
+              to="/blogs"
+              className="focus-ring rounded-lg border border-[#93b4ef] bg-white px-7 py-3.5 font-semibold text-[#1d4ed8] hover:bg-[#eff6ff]"
+            >
+              Explore stories
+            </Link>
+          </div>
+          <div className="mt-12 flex items-center gap-5 text-sm text-[var(--muted)]">
+            <div className="flex -space-x-2">
+              {['#1d4ed8', '#3b82f6', '#1e40af'].map((color, index) => (
+                <span
+                  key={color}
+                  className="grid h-9 w-9 place-items-center rounded-full border-2 border-white text-xs font-bold text-white"
+                  style={{ background: color }}
+                >
+                  {['M', 'A', 'K'][index]}
+                </span>
+              ))}
+            </div>
+            <span>
+              <strong className="text-[var(--ink)]">Ideas have a place here.</strong>
+              <br />
+              Add yours to the mix.
+            </span>
+          </div>
+        </div>
+        <div className="relative hidden min-h-[620px] lg:block">
+          <div className="grain absolute inset-8 rotate-3 rounded-[34px] bg-[#2563eb]" />
+          <div className="absolute left-0 top-24 w-[78%] -rotate-3 rounded-[20px] bg-white p-7 text-[#10213d] shadow-2xl">
+            <p className="text-xs font-bold uppercase tracking-[.16em] text-[#2563eb]">Featured thought</p>
+            <h2 className="mt-5 font-display text-5xl font-semibold leading-[1.02]">
+              The quiet art of paying attention.
+            </h2>
+            <p className="mt-5 leading-7 text-[#64748b]">
+              What we notice shapes what we make. A field guide to seeing the ordinary with new eyes.
+            </p>
+            <div className="mt-8 flex items-center justify-between border-t border-[#d9e3f3] pt-5 text-sm">
+              <span className="font-semibold">Maya Bennett</span>
+              <span className="text-[#64748b]">6 min read</span>
+            </div>
+          </div>
+          <div className="absolute bottom-12 right-0 w-64 rotate-6 rounded-[18px] border border-white/30 bg-[#1e40af] p-6 text-white shadow-2xl">
+            <span className="font-display text-6xl">“</span>
+            <p className="font-display text-2xl leading-tight">Write what only you can write.</p>
+            <div className="mt-8 h-1 w-12 bg-white/70" />
+          </div>
+        </div>
+      </section>
+      <section className="border-y border-[var(--line)] bg-[#f5f8ff]">
+        <div className="container-main grid gap-8 py-16 md:grid-cols-3">
+          {[
+            ['01', 'Read with intention', 'Thoughtful stories, curated for depth—not clicks.'],
+            ['02', 'Write without friction', 'A calm editor that keeps your words in focus.'],
+            ['03', 'Find your people', 'Follow ideas and voices that expand your world.']
+          ].map(([n, t, d]) => (
+            <div key={n}>
+              <span className="text-sm font-bold text-[#2563eb]">{n}</span>
+              <h3 className="mt-4 font-display text-3xl font-semibold">{t}</h3>
+              <p className="mt-2 leading-7 text-[var(--muted)]">{d}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+    </main>
+  </div>
+);

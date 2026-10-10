@@ -4,6 +4,7 @@ keep_vars = true
 
 # DATABASE_URL and JWT_SECRET are encrypted Worker secrets.
 # Configure them with `npx wrangler secret put <NAME>`; never commit them here.
+# Set FRONTEND_URL to the deployed frontend origin to restrict browser API access.
 
 # [vars]
 # MY_VAR = "my-variable"

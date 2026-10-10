@@ -1,2 +1,108 @@
-interface IconProps { name: 'search'|'write'|'sun'|'moon'|'bookmark'|'arrow'|'clock'|'user'|'eye'|'heart'|'share'|'check'|'spark'|'menu'|'close'; size?: number; filled?: boolean }
-export const Icon=({name,size=20,filled=false}:IconProps)=>{const paths:Record<IconProps['name'],JSX.Element>={search:<><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></>,write:<><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"/></>,sun:<><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.66 6.34l1.41-1.41"/></>,moon:<path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z"/>,bookmark:<path d="M6 3h12v18l-6-4-6 4Z"/>,arrow:<><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></>,clock:<><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></>,user:<><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></>,eye:<><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="2.5"/></>,heart:<path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.8-7.5 1.1-1.1a5.5 5.5 0 0 0-.1-7.8Z"/>,share:<><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 10.5 6.8-4M8.6 13.5l6.8 4"/></>,check:<path d="m5 12 4 4L19 6"/>,spark:<path d="m12 3 1.3 4.2L17 9l-3.7 1.8L12 15l-1.3-4.2L7 9l3.7-1.8ZM5 15l.7 2.3L8 18l-2.3.7L5 21l-.7-2.3L2 18l2.3-.7Z"/>,menu:<><path d="M4 7h16M4 12h16M4 17h16"/></>,close:<><path d="m6 6 12 12M18 6 6 18"/></>};return <svg width={size} height={size} viewBox="0 0 24 24" fill={filled?'currentColor':'none'} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>}
+interface IconProps {
+  name:
+    | 'search'
+    | 'write'
+    | 'sun'
+    | 'moon'
+    | 'bookmark'
+    | 'arrow'
+    | 'clock'
+    | 'user'
+    | 'eye'
+    | 'heart'
+    | 'share'
+    | 'check'
+    | 'spark'
+    | 'menu'
+    | 'close';
+  size?: number;
+  filled?: boolean;
+}
+export const Icon = ({ name, size = 20, filled = false }: IconProps) => {
+  const paths: Record<IconProps['name'], JSX.Element> = {
+    search: (
+      <>
+        <circle cx="11" cy="11" r="7" />
+        <path d="m20 20-4-4" />
+      </>
+    ),
+    write: (
+      <>
+        <path d="M12 20h9" />
+        <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z" />
+      </>
+    ),
+    sun: (
+      <>
+        <circle cx="12" cy="12" r="4" />
+        <path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.66 6.34l1.41-1.41" />
+      </>
+    ),
+    moon: <path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z" />,
+    bookmark: <path d="M6 3h12v18l-6-4-6 4Z" />,
+    arrow: (
+      <>
+        <path d="M5 12h14" />
+        <path d="m13 6 6 6-6 6" />
+      </>
+    ),
+    clock: (
+      <>
+        <circle cx="12" cy="12" r="9" />
+        <path d="M12 7v5l3 2" />
+      </>
+    ),
+    user: (
+      <>
+        <circle cx="12" cy="8" r="4" />
+        <path d="M4 21a8 8 0 0 1 16 0" />
+      </>
+    ),
+    eye: (
+      <>
+        <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z" />
+        <circle cx="12" cy="12" r="2.5" />
+      </>
+    ),
+    heart: (
+      <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.8-7.5 1.1-1.1a5.5 5.5 0 0 0-.1-7.8Z" />
+    ),
+    share: (
+      <>
+        <circle cx="18" cy="5" r="3" />
+        <circle cx="6" cy="12" r="3" />
+        <circle cx="18" cy="19" r="3" />
+        <path d="m8.6 10.5 6.8-4M8.6 13.5l6.8 4" />
+      </>
+    ),
+    check: <path d="m5 12 4 4L19 6" />,
+    spark: (
+      <path d="m12 3 1.3 4.2L17 9l-3.7 1.8L12 15l-1.3-4.2L7 9l3.7-1.8ZM5 15l.7 2.3L8 18l-2.3.7L5 21l-.7-2.3L2 18l2.3-.7Z" />
+    ),
+    menu: (
+      <>
+        <path d="M4 7h16M4 12h16M4 17h16" />
+      </>
+    ),
+    close: (
+      <>
+        <path d="m6 6 12 12M18 6 6 18" />
+      </>
+    )
+  };
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill={filled ? 'currentColor' : 'none'}
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      {paths[name]}
+    </svg>
+  );
+};
