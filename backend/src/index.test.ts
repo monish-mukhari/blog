@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import app from './index';
+import { app } from './index';
 
 const env = {
   DATABASE_URL: 'prisma://unused-in-auth-test',

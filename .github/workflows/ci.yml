@@ -1,0 +1,49 @@
+name: Continuous integration
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: |
+            common/package-lock.json
+            backend/package-lock.json
+            frontend/package-lock.json
+
+      - name: Install and verify shared schemas
+        working-directory: common
+        run: |
+          npm ci
+          npm run typecheck
+
+      - name: Install and verify Worker API
+        working-directory: backend
+        run: |
+          npm ci
+          npx prisma generate
+          npm run typecheck
+          npm test
+
+      - name: Install and verify frontend
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run format:check
+          npm run lint
+          npm run build

@@ -4,6 +4,8 @@ interface StoryMetadata {
   canonicalUrl: string;
   author: string;
   publishedAt?: string;
+  updatedAt?: string;
+  imageUrl?: string;
 }
 
 const upsertMeta = (selector: string, attributes: Record<string, string>) => {
@@ -33,7 +35,9 @@ export const applyStoryMetadata = ({
   description,
   canonicalUrl,
   author,
-  publishedAt
+  publishedAt,
+  updatedAt,
+  imageUrl
 }: StoryMetadata) => {
   const previousTitle = document.title;
   document.title = `${title} — Inkwell`;
@@ -63,6 +67,20 @@ export const applyStoryMetadata = ({
         property: 'article:published_time',
         content: publishedAt
       })
+    );
+  }
+  if (updatedAt) {
+    cleanups.push(
+      upsertMeta('meta[property="article:modified_time"]', {
+        property: 'article:modified_time',
+        content: updatedAt
+      })
+    );
+  }
+  if (imageUrl) {
+    cleanups.push(
+      upsertMeta('meta[property="og:image"]', { property: 'og:image', content: imageUrl }),
+      upsertMeta('meta[name="twitter:image"]', { name: 'twitter:image', content: imageUrl })
     );
   }
 

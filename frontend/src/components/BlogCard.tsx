@@ -36,6 +36,17 @@ export const StoryArt = ({ title, large = false }: { title: string; large?: bool
     </div>
   );
 };
+const CardArt = ({ blog, large = false }: { blog: Blog; large?: boolean }) =>
+  blog.coverImageUrl ? (
+    <img
+      src={blog.coverImageUrl}
+      alt={blog.coverImageAlt || ''}
+      loading="lazy"
+      className={`w-full rounded-[18px] object-cover ${large ? 'min-h-[300px] max-h-[440px]' : 'h-36 sm:h-44'}`}
+    />
+  ) : (
+    <StoryArt title={blog.title} large={large} />
+  );
 export const Avatar = ({ name, size = 'small' }: { name: string; size?: 'small' | 'big' }) => (
   <div
     className={`inline-grid shrink-0 place-items-center rounded-full bg-[#10213d] font-semibold text-white ${size === 'small' ? 'h-7 w-7 text-[10px]' : 'h-11 w-11 text-sm'}`}
@@ -79,7 +90,7 @@ export const BlogCard = ({ blog, featured = false }: { blog: Blog; featured?: bo
         to={storyUrl}
         className="group grid gap-7 rounded-[30px] border border-[var(--line)] bg-[var(--surface)] p-5 transition hover:-translate-y-1 hover:shadow-[0_18px_60px_rgba(31,39,33,.10)] md:grid-cols-[1.05fr_.95fr] md:p-7"
       >
-        <StoryArt title={blog.title} large />
+        <CardArt blog={blog} large />
         <div className="flex flex-col justify-center py-3">
           <span className="mb-5 w-fit rounded-lg bg-[#eff6ff] px-3 py-1 text-xs font-bold uppercase tracking-[.14em] text-[#2563eb]">
             Featured · {blogCategory(blog)}
@@ -102,7 +113,7 @@ export const BlogCard = ({ blog, featured = false }: { blog: Blog; featured?: bo
       to={storyUrl}
       className="group flex h-full flex-col rounded-[24px] border border-[var(--line)] bg-[var(--surface)] p-4 transition duration-300 hover:-translate-y-1 hover:shadow-[0_14px_40px_rgba(31,39,33,.09)]"
     >
-      <StoryArt title={blog.title} />
+      <CardArt blog={blog} />
       <div className="flex flex-1 flex-col px-1 pb-1 pt-5">
         <div className="flex items-center justify-between">
           <span className="text-xs font-bold uppercase tracking-[.12em] text-[#2563eb]">

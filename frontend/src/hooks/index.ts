@@ -4,6 +4,7 @@ import { BACKEND_URL } from '../config';
 
 export interface Blog {
   content?: string;
+  contentFormat?: 'markdown';
   contentPreview?: string;
   readingTime?: number;
   title: string;
@@ -12,6 +13,10 @@ export interface Blog {
   excerpt?: string;
   tags?: string[];
   createdAt?: string;
+  publishedAt?: string;
+  updatedAt?: string;
+  coverImageUrl?: string;
+  coverImageAlt?: string;
   clapCount?: number;
   saved?: boolean;
   liked?: boolean;
@@ -22,6 +27,7 @@ interface BlogQuery {
   search?: string;
   topic?: string;
   saved?: boolean;
+  sort?: 'newest' | 'oldest' | 'popular';
 }
 
 interface Pagination {
@@ -54,7 +60,7 @@ export const useBlog = ({ id }: { id: string }) => {
   return { loading, blog, error };
 };
 
-export const useBlogs = ({ search = '', topic = '', saved = false }: BlogQuery) => {
+export const useBlogs = ({ search = '', topic = '', saved = false, sort = 'newest' }: BlogQuery) => {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [blogs, setBlogs] = useState<Blog[]>([]);
@@ -75,7 +81,8 @@ export const useBlogs = ({ search = '', topic = '', saved = false }: BlogQuery) 
             limit: 12,
             search: search || undefined,
             topic: topic || undefined,
-            saved: saved || undefined
+            saved: saved || undefined,
+            sort
           }
         });
         if (requestId !== latestRequest.current) return;
@@ -105,7 +112,7 @@ export const useBlogs = ({ search = '', topic = '', saved = false }: BlogQuery) 
         }
       }
     },
-    [saved, search, topic]
+    [saved, search, sort, topic]
   );
 
   useEffect(() => {

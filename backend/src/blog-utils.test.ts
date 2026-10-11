@@ -14,7 +14,8 @@ describe('parseStoryListOptions', () => {
       limit: 12,
       search: '',
       topic: '',
-      savedOnly: false
+      savedOnly: false,
+      sort: 'newest'
     });
   });
 
@@ -27,7 +28,7 @@ describe('parseStoryListOptions', () => {
         topic: '  Technology  ',
         saved: 'true'
       }),
-      { page: 1, limit: 24, search: 'TypeScript', topic: 'Technology', savedOnly: true }
+      { page: 1, limit: 24, search: 'TypeScript', topic: 'Technology', savedOnly: true, sort: 'newest' }
     );
   });
 });
@@ -51,6 +52,12 @@ describe('createStorySlug', () => {
       createStorySlug('  Déjà Vu: A TypeScript Story!  ', '12345678-abcd-4000-9000-123456789abc'),
       'deja-vu-a-typescript-story-12345678ab'
     );
+  });
+
+  it('accepts supported story sorting and defaults unknown values', () => {
+    assert.equal(parseStoryListOptions({ sort: 'oldest' }).sort, 'oldest');
+    assert.equal(parseStoryListOptions({ sort: 'popular' }).sort, 'popular');
+    assert.equal(parseStoryListOptions({ sort: 'unexpected' }).sort, 'newest');
   });
 
   it('provides a fallback for titles without latin characters', () => {

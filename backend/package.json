@@ -3,7 +3,7 @@
     "dev": "wrangler dev src/index.ts",
     "deploy": "prisma generate --no-engine && wrangler deploy --minify src/index.ts",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test src/blog-utils.test.ts src/index.test.ts"
+    "test": "tsx --test src/*.test.ts"
   },
   "dependencies": {
     "@monish21/medium-common": "file:../common",
@@ -15,6 +15,6 @@
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20240529.0",
     "tsx": "^4.23.15",
-    "wrangler": "^3.57.2"
+    "wrangler": "^4.149.0"
   }
 }

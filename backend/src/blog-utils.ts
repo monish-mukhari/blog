@@ -4,6 +4,7 @@ export interface StoryListQuery {
   search?: string;
   topic?: string;
   saved?: string;
+  sort?: string;
 }
 
 export interface StoryListOptions {
@@ -12,6 +13,7 @@ export interface StoryListOptions {
   search: string;
   topic: string;
   savedOnly: boolean;
+  sort: 'newest' | 'oldest' | 'popular';
 }
 
 const parsePositiveInteger = (value: string | undefined, fallback: number) => {
@@ -24,13 +26,30 @@ export const parseStoryListOptions = (query: StoryListQuery): StoryListOptions =
   limit: Math.min(24, parsePositiveInteger(query.limit, 12)),
   search: (query.search || '').trim().slice(0, 100),
   topic: (query.topic || '').trim().slice(0, 30),
-  savedOnly: query.saved === 'true'
+  savedOnly: query.saved === 'true',
+  sort: query.sort === 'oldest' || query.sort === 'popular' ? query.sort : 'newest'
 });
 
 export const calculateReadingTime = (content: string) =>
   Math.max(1, Math.ceil(content.trim().split(/\s+/).filter(Boolean).length / 220));
 
 export const createContentPreview = (content: string) => content.replace(/\s+/g, ' ').trim().slice(0, 240);
+
+export const markdownToPlainText = (content: string) =>
+  content
+    .replace(/```[\s\S]*?```/g, ' ')
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+    .replace(/^#{1,6}\s+/gm, '')
+    .replace(/^\s*>\s?/gm, '')
+    .replace(/^\s*[-*+]\s+/gm, '')
+    .replace(/^\s*\d+\.\s+/gm, '')
+    .replace(/[~*_]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+export const createMarkdownPreview = (content: string) => markdownToPlainText(content).slice(0, 240);
 
 export const createStorySlug = (title: string, id: string) => {
   const readable = title

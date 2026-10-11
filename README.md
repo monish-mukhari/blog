@@ -2,6 +2,8 @@
 
 Inkwell is a full-stack publishing platform for reading, writing, and sharing thoughtful stories. It combines a responsive editorial interface with account-based bookmarks, appreciation, author following, draft autosave, and a serverless API.
 
+Current delivery status, implementation context, and next phases are maintained in [`PROJECT_STATUS.md`](PROJECT_STATUS.md). See [`docs/SEO_GUIDE.md`](docs/SEO_GUIDE.md) for the visual SEO guide and [`docs/PUBLISHING_WORKFLOW.md`](docs/PUBLISHING_WORKFLOW.md) for the complete authoring lifecycle.
+
 ![React](https://img.shields.io/badge/React-18-149ECA?logo=react&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)
 ![Cloudflare Workers](https://img.shields.io/badge/Cloudflare-Workers-F38020?logo=cloudflare&logoColor=white)
@@ -16,6 +18,9 @@ Inkwell is a full-stack publishing platform for reading, writing, and sharing th
 - Story publishing with titles, summaries, topics, and reading-time estimates
 - Automatic local draft saving and restoration
 - Account-synced drafts with an author story dashboard
+- Structured Markdown editor with formatting tools and live preview
+- Processed cover and inline image uploads with alternative text and captions
+- Safe published-story editing, unpublishing, duplication, scheduling, and revision recovery
 - Search and topic filtering
 - Account-synced bookmarks and a saved-story library
 - Account-synced appreciation counts
@@ -36,17 +41,17 @@ flowchart LR
     Cloudflare[Cloudflare Workers] --> Worker
 ```
 
-| Layer | Technology |
-| --- | --- |
-| Frontend | React, TypeScript, Vite, Tailwind CSS |
-| Routing | React Router |
-| API client | Axios |
-| Backend | Hono on Cloudflare Workers |
-| Database | Neon PostgreSQL |
-| ORM | Prisma with Prisma Accelerate |
-| Validation | Zod |
-| Frontend hosting | Vercel |
-| API hosting | Cloudflare Workers |
+| Layer            | Technology                            |
+| ---------------- | ------------------------------------- |
+| Frontend         | React, TypeScript, Vite, Tailwind CSS |
+| Routing          | React Router                          |
+| API client       | Axios                                 |
+| Backend          | Hono on Cloudflare Workers            |
+| Database         | Neon PostgreSQL                       |
+| ORM              | Prisma with Prisma Accelerate         |
+| Validation       | Zod                                   |
+| Frontend hosting | Vercel                                |
+| API hosting      | Cloudflare Workers                    |
 
 ## Repository structure
 
@@ -135,12 +140,14 @@ Open `http://localhost:5173`.
 
 ## Environment variables
 
-| Variable | Used by | Description |
-| --- | --- | --- |
-| `DATABASE_URL` | Prisma CLI | Direct Neon URL when applying migrations |
-| `DATABASE_URL` | Cloudflare Worker | Prisma Accelerate `prisma://` runtime URL |
-| `JWT_SECRET` | Cloudflare Worker | Secret used to sign and verify authentication tokens |
-| `FRONTEND_URL` | Cloudflare Worker | Deployed frontend origin used by the API CORS policy |
+| Variable       | Used by           | Description                                          |
+| -------------- | ----------------- | ---------------------------------------------------- |
+| `DATABASE_URL` | Prisma CLI        | Direct Neon URL when applying migrations             |
+| `DATABASE_URL` | Cloudflare Worker | Prisma Accelerate `prisma://` runtime URL            |
+| `JWT_SECRET`   | Cloudflare Worker | Secret used to sign and verify authentication tokens |
+| `FRONTEND_URL` | Cloudflare Worker | Deployed frontend origin used by CORS and canonical SEO URLs |
+| `ERROR_MONITOR_URL` | Cloudflare Worker | Optional HTTPS webhook for structured production error events |
+| `ERROR_MONITOR_TOKEN` | Cloudflare Worker | Optional bearer token for the monitoring webhook |
 
 Production variables should be configured as encrypted Cloudflare Worker secrets or dashboard-managed runtime variables. The repository sets `keep_vars = true`, so Wrangler deployments preserve variables managed in the Cloudflare dashboard.
 
@@ -168,33 +175,42 @@ npm run deploy    # Generate the engine-free Prisma client and deploy
 
 ## API routes
 
-| Method | Route | Description |
-| --- | --- | --- |
-| `GET` | `/health` | Worker health check |
-| `POST` | `/api/v1/user/signup` | Create an account |
-| `POST` | `/api/v1/user/signin` | Authenticate an account |
-| `GET` | `/api/v1/blog/bulk` | List published stories with pagination, search, topic, and saved filters |
-| `GET` | `/api/v1/blog/:id` | Read one published story |
-| `POST` | `/api/v1/blog` | Publish a story |
-| `PUT` | `/api/v1/blog` | Update an owned story |
-| `POST` | `/api/v1/blog/drafts` | Create or update an account-synced draft |
-| `GET` | `/api/v1/blog/drafts/:id` | Load an owned draft |
-| `GET` | `/api/v1/blog/mine` | List the current author's drafts and stories |
-| `POST` | `/api/v1/blog/:id/publish` | Publish an owned draft |
-| `DELETE` | `/api/v1/blog/:id` | Delete an owned draft or story |
-| `POST` | `/api/v1/blog/:id/bookmark` | Save or unsave a story |
-| `POST` | `/api/v1/blog/:id/clap` | Add or remove appreciation |
-| `POST` | `/api/v1/blog/author/:id/follow` | Follow or unfollow an author |
+| Method   | Route                            | Description                                                              |
+| -------- | -------------------------------- | ------------------------------------------------------------------------ |
+| `GET`    | `/health`                        | Worker health check                                                      |
+| `POST`   | `/api/v1/user/signup`            | Create an account                                                        |
+| `POST`   | `/api/v1/user/signin`            | Authenticate an account                                                  |
+| `GET`    | `/api/v1/blog/bulk`              | List stories with pagination, search, topic, saved, and sort filters      |
+| `GET`    | `/api/v1/blog/:id`               | Read one published story                                                 |
+| `POST`   | `/api/v1/blog`                   | Publish a story                                                          |
+| `PUT`    | `/api/v1/blog`                   | Update an owned story                                                    |
+| `POST`   | `/api/v1/blog/drafts`            | Create or update an account-synced draft                                 |
+| `GET`    | `/api/v1/blog/drafts/:id`        | Load an owned draft                                                      |
+| `GET`    | `/api/v1/blog/manage/:id`        | Load an owned story into the editor                                      |
+| `GET`    | `/api/v1/blog/mine`              | List the current author's drafts and stories                             |
+| `POST`   | `/api/v1/blog/:id/publish`       | Publish an owned draft                                                   |
+| `POST`   | `/api/v1/blog/:id/edit`          | Create or reuse a safe edit draft for a published story                  |
+| `POST`   | `/api/v1/blog/:id/unpublish`     | Return a published story to draft state                                  |
+| `POST`   | `/api/v1/blog/:id/duplicate`     | Duplicate an owned story into a new draft                                |
+| `POST`   | `/api/v1/blog/:id/schedule`      | Schedule a draft for publication                                         |
+| `DELETE` | `/api/v1/blog/:id/schedule`      | Cancel scheduled publication                                             |
+| `GET`    | `/api/v1/blog/:id/revisions`     | List revision snapshots                                                  |
+| `POST`   | `/api/v1/blog/:id/revisions/:revisionId/restore` | Restore a revision                                  |
+| `DELETE` | `/api/v1/blog/:id`               | Delete an owned draft or story                                           |
+| `POST`   | `/api/v1/blog/:id/bookmark`      | Save or unsave a story                                                   |
+| `POST`   | `/api/v1/blog/:id/clap`          | Add or remove appreciation                                               |
+| `POST`   | `/api/v1/blog/author/:id/follow` | Follow or unfollow an author                                             |
+| `POST`   | `/api/v1/media`                  | Processed authenticated image upload                                     |
+| `GET`    | `/media/:id`                     | Serve immutable uploaded media                                           |
 
 Published story list and detail routes are public. Supplying an optional `Authorization: Bearer <token>` header
 adds the current reader's bookmark, appreciation, and follow state. Publishing and interaction routes require a
 valid token.
 
-The list route accepts `page`, `limit` (maximum 24), `search`, `topic`, and `saved=true` query parameters.
+The list route accepts `page`, `limit` (maximum 24), `search`, `topic`, `saved=true`, and `sort=newest|oldest|popular` query parameters.
 The saved filter requires authentication.
 
-The Worker also serves `/sitemap.xml`, `/rss.xml`, and crawler-friendly `/share/:slug` pages. New public
-stories use `/story/:slug`; existing `/blog/:id` links remain supported.
+The Worker also serves `/sitemap.xml`, `/rss.xml`, `/render/:slug`, and crawler-friendly `/share/:slug` pages. Vercel rewrites direct canonical `/story/:slug` requests to the edge renderer, while React handles interactive in-app navigation. Existing `/blog/:id` links remain supported.
 
 ## Deploy the backend to Cloudflare Workers
 
@@ -228,14 +244,14 @@ npx wrangler tail backend --format pretty
 
 Import the Git repository into Vercel and configure:
 
-| Setting | Value |
-| --- | --- |
-| Root Directory | `frontend` |
-| Framework Preset | Vite |
-| Build Command | `npm run build` |
-| Output Directory | `dist` |
+| Setting          | Value           |
+| ---------------- | --------------- |
+| Root Directory   | `frontend`      |
+| Framework Preset | Vite            |
+| Build Command    | `npm run build` |
+| Output Directory | `dist`          |
 
-The included `frontend/vercel.json` rewrites client-side routes to `index.html`, allowing direct navigation to routes such as `/signin`, `/blogs`, and `/blog/:id`.
+The included `frontend/vercel.json` edge-renders direct canonical story requests, proxies sitemap and RSS, and rewrites remaining client-side routes to the React application.
 
 You can also deploy through the CLI:
 
@@ -257,6 +273,7 @@ npm run build
 cd ../backend
 npx prisma generate --no-engine
 npx tsc --noEmit
+npm test
 ```
 
 Then confirm:

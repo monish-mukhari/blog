@@ -15,6 +15,7 @@ export const Blogs = () => {
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [category, setCategory] = useState('For you');
+  const [sort, setSort] = useState<'newest' | 'oldest' | 'popular'>('newest');
   const [savedOverrides, setSavedOverrides] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
@@ -35,7 +36,8 @@ export const Blogs = () => {
   const { loading, loadingMore, blogs, error, total, hasMore, reload, loadMore } = useBlogs({
     search: debouncedSearch,
     topic: category === 'For you' ? '' : category,
-    saved: savedView
+    saved: savedView,
+    sort
   });
 
   const visibleBlogs = useMemo(
@@ -81,25 +83,44 @@ export const Blogs = () => {
           </div>
         </section>
 
-        <nav
-          className="mb-8 flex gap-2 overflow-x-auto border-b border-[var(--line)] pb-4"
-          aria-label="Story categories"
-        >
-          {categories.map((item) => (
-            <button
-              key={item}
-              type="button"
-              onClick={() => setCategory(item)}
-              className={`whitespace-nowrap rounded-lg px-4 py-2 text-sm font-semibold transition ${
-                category === item
-                  ? 'bg-[#2563eb] text-white'
-                  : 'bg-[var(--surface)] text-[var(--muted)] hover:text-[var(--ink)]'
-              }`}
-            >
-              {item}
-            </button>
-          ))}
-        </nav>
+        <div className="mb-8 flex flex-col gap-4 border-b border-[var(--line)] pb-4 sm:flex-row sm:items-center sm:justify-between">
+          <nav className="flex gap-2 overflow-x-auto" aria-label="Story categories">
+            {categories.map((item) => (
+              <button
+                key={item}
+                type="button"
+                onClick={() => setCategory(item)}
+                className={`whitespace-nowrap rounded-lg px-4 py-2 text-sm font-semibold transition ${
+                  category === item
+                    ? 'bg-[#2563eb] text-white'
+                    : 'bg-[var(--surface)] text-[var(--muted)] hover:text-[var(--ink)]'
+                }`}
+              >
+                {item}
+              </button>
+            ))}
+          </nav>
+          <label className="flex shrink-0 items-center gap-2 text-sm text-[var(--muted)]">
+            Sort
+            <span className="relative">
+              <select
+                value={sort}
+                onChange={(event) => setSort(event.target.value as typeof sort)}
+                className="appearance-none rounded-lg border border-[var(--line)] bg-white py-2 pl-3 pr-12 font-semibold text-[var(--ink)]"
+              >
+                <option value="newest">Newest</option>
+                <option value="oldest">Oldest</option>
+                <option value="popular">Most appreciated</option>
+              </select>
+              <span
+                className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[var(--muted)]"
+                aria-hidden="true"
+              >
+                <Icon name="chevronDown" size={17} />
+              </span>
+            </span>
+          </label>
+        </div>
 
         {error ? (
           <StateCard title={savedView ? 'Your library is private.' : 'A small plot twist.'} message={error}>

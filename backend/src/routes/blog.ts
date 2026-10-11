@@ -1,14 +1,15 @@
-import { Prisma, PrismaClient } from '@prisma/client/edge';
-import { withAccelerate } from '@prisma/extension-accelerate';
+import { Prisma } from '@prisma/client/edge';
 import { Hono } from 'hono';
 import { verify } from 'hono/jwt';
-import { createBlogInput, draftBlogInput, updateBlogInput } from '@monish21/medium-common';
+import { createBlogInput, draftBlogInput, scheduleBlogInput, updateBlogInput } from '@monish21/medium-common';
 import {
   calculateReadingTime,
-  createContentPreview,
+  createMarkdownPreview,
   createStorySlug,
   parseStoryListOptions
 } from '../blog-utils';
+import { createDatabase } from '../db';
+import { publishDraft, publishDueStories, saveRevision } from '../publishing';
 
 type Env = {
   Bindings: { DATABASE_URL: string; JWT_SECRET: string };
@@ -16,7 +17,7 @@ type Env = {
 };
 
 export const blogRouter = new Hono<Env>();
-const db = (url: string) => new PrismaClient({ datasourceUrl: url }).$extends(withAccelerate());
+const db = createDatabase;
 
 const unauthorized = (message = 'Please sign in to continue.') => ({ error: message });
 
@@ -60,8 +61,11 @@ blogRouter.post('/', async (context) => {
       slug: createStorySlug(parsed.data.title, id),
       title: parsed.data.title,
       content: parsed.data.content,
+      contentFormat: parsed.data.contentFormat,
       excerpt: parsed.data.excerpt || null,
       tags: parsed.data.tags || [],
+      coverImageUrl: parsed.data.coverImageUrl || null,
+      coverImageAlt: parsed.data.coverImageAlt || null,
       published: true,
       publishedAt: new Date(),
       authorId: userId
@@ -79,17 +83,25 @@ blogRouter.put('/', async (context) => {
   const parsed = updateBlogInput.safeParse(body);
   if (!parsed.success) return context.json({ error: 'Invalid story content.' }, 400);
 
-  const result = await prisma.post.updateMany({
-    where: { id: parsed.data.id, authorId: userId },
+  const existing = await prisma.post.findFirst({
+    where: { id: parsed.data.id, authorId: userId }
+  });
+  if (!existing)
+    return context.json({ error: 'Story not found or you do not have permission to edit it.' }, 404);
+  if (existing.published) await saveRevision(prisma, existing);
+
+  await prisma.post.update({
+    where: { id: existing.id },
     data: {
       title: parsed.data.title,
       content: parsed.data.content,
+      contentFormat: parsed.data.contentFormat,
       excerpt: parsed.data.excerpt,
-      tags: parsed.data.tags
+      tags: parsed.data.tags,
+      coverImageUrl: parsed.data.coverImageUrl || null,
+      coverImageAlt: parsed.data.coverImageAlt || null
     }
   });
-  if (!result.count)
-    return context.json({ error: 'Story not found or you do not have permission to edit it.' }, 404);
   return context.json({ message: 'Story updated' });
 });
 
@@ -104,8 +116,11 @@ blogRouter.post('/drafts', async (context) => {
   const data = {
     title: parsed.data.title,
     content: parsed.data.content,
+    contentFormat: parsed.data.contentFormat,
     excerpt: parsed.data.excerpt || null,
-    tags: parsed.data.tags || []
+    tags: parsed.data.tags || [],
+    coverImageUrl: parsed.data.coverImageUrl || null,
+    coverImageAlt: parsed.data.coverImageAlt || null
   };
 
   if (parsed.data.id) {
@@ -142,7 +157,19 @@ blogRouter.get('/drafts/:id', async (context) => {
   const prisma = db(context.env.DATABASE_URL);
   const draft = await prisma.post.findFirst({
     where: { id: context.req.param('id'), authorId: userId, published: false },
-    select: { id: true, title: true, content: true, excerpt: true, tags: true, updatedAt: true }
+    select: {
+      id: true,
+      title: true,
+      content: true,
+      contentFormat: true,
+      excerpt: true,
+      tags: true,
+      coverImageUrl: true,
+      coverImageAlt: true,
+      scheduledAt: true,
+      sourcePostId: true,
+      updatedAt: true
+    }
   });
   if (!draft) return context.json({ error: 'Draft not found.' }, 404);
   return context.json({ draft });
@@ -166,9 +193,14 @@ blogRouter.get('/mine', async (context) => {
       title: true,
       excerpt: true,
       content: true,
+      contentFormat: true,
       tags: true,
+      coverImageUrl: true,
+      coverImageAlt: true,
       published: true,
       publishedAt: true,
+      scheduledAt: true,
+      sourcePostId: true,
       createdAt: true,
       updatedAt: true,
       _count: { select: { claps: true, bookmarks: true } }
@@ -178,7 +210,7 @@ blogRouter.get('/mine', async (context) => {
   return context.json({
     posts: posts.map(({ content, _count, ...post }) => ({
       ...post,
-      contentPreview: createContentPreview(content),
+      contentPreview: createMarkdownPreview(content),
       readingTime: calculateReadingTime(content),
       clapCount: _count.claps,
       bookmarkCount: _count.bookmarks
@@ -200,18 +232,215 @@ blogRouter.post('/:id/publish', async (context) => {
     return context.json({ error: 'Add a clear title and at least a few sentences before publishing.' }, 400);
   }
 
-  const updated = await prisma.post.update({
-    where: { id: post.id },
-    data: {
-      title: post.title.trim(),
-      content: post.content.trim(),
-      slug: createStorySlug(post.title, post.id),
-      published: true,
-      publishedAt: new Date()
-    },
-    select: { id: true, slug: true }
-  });
+  const current = await prisma.post.findUnique({ where: { id: post.id }, select: { slug: true } });
+  if (current?.slug.startsWith('draft-')) {
+    await prisma.post.update({
+      where: { id: post.id },
+      data: { slug: createStorySlug(post.title, post.id) }
+    });
+  }
+  const updated = await publishDraft(prisma, post.id, userId);
+  if (!updated) return context.json({ error: 'Draft not found.' }, 404);
   return context.json(updated);
+});
+
+blogRouter.get('/manage/:id', async (context) => {
+  const userId = context.get('userId');
+  if (!userId) return context.json(unauthorized(), 401);
+
+  const prisma = db(context.env.DATABASE_URL);
+  const story = await prisma.post.findFirst({
+    where: { id: context.req.param('id'), authorId: userId },
+    select: {
+      id: true,
+      slug: true,
+      title: true,
+      content: true,
+      contentFormat: true,
+      excerpt: true,
+      tags: true,
+      coverImageUrl: true,
+      coverImageAlt: true,
+      published: true,
+      publishedAt: true,
+      scheduledAt: true,
+      sourcePostId: true,
+      updatedAt: true
+    }
+  });
+  if (!story) return context.json({ error: 'Story not found.' }, 404);
+  return context.json({ story });
+});
+
+blogRouter.post('/:id/edit', async (context) => {
+  const userId = context.get('userId');
+  if (!userId) return context.json(unauthorized(), 401);
+
+  const prisma = db(context.env.DATABASE_URL);
+  const source = await prisma.post.findFirst({
+    where: { id: context.req.param('id'), authorId: userId, published: true }
+  });
+  if (!source) return context.json({ error: 'Published story not found.' }, 404);
+
+  const existing = await prisma.post.findUnique({
+    where: { sourcePostId: source.id },
+    select: { id: true }
+  });
+  if (existing) return context.json({ draft: existing });
+
+  const id = crypto.randomUUID();
+  const draft = await prisma.post.create({
+    data: {
+      id,
+      slug: `draft-${id.replace(/-/g, '')}`,
+      title: source.title,
+      content: source.content,
+      contentFormat: source.contentFormat,
+      excerpt: source.excerpt,
+      tags: source.tags,
+      coverImageUrl: source.coverImageUrl,
+      coverImageAlt: source.coverImageAlt,
+      authorId: userId,
+      sourcePostId: source.id
+    },
+    select: { id: true }
+  });
+  return context.json({ draft }, 201);
+});
+
+blogRouter.post('/:id/duplicate', async (context) => {
+  const userId = context.get('userId');
+  if (!userId) return context.json(unauthorized(), 401);
+
+  const prisma = db(context.env.DATABASE_URL);
+  const source = await prisma.post.findFirst({
+    where: { id: context.req.param('id'), authorId: userId }
+  });
+  if (!source) return context.json({ error: 'Story not found.' }, 404);
+
+  const id = crypto.randomUUID();
+  const draft = await prisma.post.create({
+    data: {
+      id,
+      slug: `draft-${id.replace(/-/g, '')}`,
+      title: `${source.title} (copy)`.slice(0, 160),
+      content: source.content,
+      contentFormat: source.contentFormat,
+      excerpt: source.excerpt,
+      tags: source.tags,
+      coverImageUrl: source.coverImageUrl,
+      coverImageAlt: source.coverImageAlt,
+      authorId: userId
+    },
+    select: { id: true }
+  });
+  return context.json({ draft }, 201);
+});
+
+blogRouter.post('/:id/unpublish', async (context) => {
+  const userId = context.get('userId');
+  if (!userId) return context.json(unauthorized(), 401);
+
+  const prisma = db(context.env.DATABASE_URL);
+  const story = await prisma.post.findFirst({
+    where: { id: context.req.param('id'), authorId: userId, published: true }
+  });
+  if (!story) return context.json({ error: 'Published story not found.' }, 404);
+  await saveRevision(prisma, story);
+  await prisma.post.update({
+    where: { id: story.id },
+    data: { published: false, scheduledAt: null }
+  });
+  return context.json({ id: story.id, status: 'draft' });
+});
+
+blogRouter.post('/:id/schedule', async (context) => {
+  const userId = context.get('userId');
+  if (!userId) return context.json(unauthorized(), 401);
+
+  const parsed = scheduleBlogInput.safeParse(await context.req.json());
+  if (!parsed.success) return context.json({ error: 'Provide a valid publication date and time.' }, 400);
+  const scheduledAt = new Date(parsed.data.scheduledAt);
+  if (scheduledAt.getTime() <= Date.now() + 60_000) {
+    return context.json({ error: 'Schedule publication at least one minute in the future.' }, 400);
+  }
+
+  const prisma = db(context.env.DATABASE_URL);
+  const story = await prisma.post.findFirst({
+    where: { id: context.req.param('id'), authorId: userId, published: false },
+    select: { id: true, slug: true, title: true, content: true }
+  });
+  if (!story) return context.json({ error: 'Draft not found.' }, 404);
+  if (story.title.trim().length < 3 || story.content.trim().length < 20) {
+    return context.json({ error: 'Complete the title and story before scheduling.' }, 400);
+  }
+
+  await prisma.post.update({
+    where: { id: story.id },
+    data: {
+      slug: story.slug.startsWith('draft-') ? createStorySlug(story.title, story.id) : story.slug,
+      scheduledAt
+    }
+  });
+  return context.json({ id: story.id, scheduledAt: scheduledAt.toISOString() });
+});
+
+blogRouter.delete('/:id/schedule', async (context) => {
+  const userId = context.get('userId');
+  if (!userId) return context.json(unauthorized(), 401);
+  const prisma = db(context.env.DATABASE_URL);
+  const result = await prisma.post.updateMany({
+    where: { id: context.req.param('id'), authorId: userId, published: false },
+    data: { scheduledAt: null }
+  });
+  if (!result.count) return context.json({ error: 'Scheduled story not found.' }, 404);
+  return context.body(null, 204);
+});
+
+blogRouter.get('/:id/revisions', async (context) => {
+  const userId = context.get('userId');
+  if (!userId) return context.json(unauthorized(), 401);
+  const prisma = db(context.env.DATABASE_URL);
+  const story = await prisma.post.findFirst({
+    where: { id: context.req.param('id'), authorId: userId },
+    select: { id: true }
+  });
+  if (!story) return context.json({ error: 'Story not found.' }, 404);
+  const revisions = await prisma.postRevision.findMany({
+    where: { postId: story.id },
+    orderBy: { createdAt: 'desc' },
+    select: { id: true, title: true, createdAt: true }
+  });
+  return context.json({ revisions });
+});
+
+blogRouter.post('/:id/revisions/:revisionId/restore', async (context) => {
+  const userId = context.get('userId');
+  if (!userId) return context.json(unauthorized(), 401);
+  const prisma = db(context.env.DATABASE_URL);
+  const story = await prisma.post.findFirst({
+    where: { id: context.req.param('id'), authorId: userId }
+  });
+  if (!story) return context.json({ error: 'Story not found.' }, 404);
+  const revision = await prisma.postRevision.findFirst({
+    where: { id: context.req.param('revisionId'), postId: story.id }
+  });
+  if (!revision) return context.json({ error: 'Revision not found.' }, 404);
+
+  await saveRevision(prisma, story);
+  await prisma.post.update({
+    where: { id: story.id },
+    data: {
+      title: revision.title,
+      content: revision.content,
+      contentFormat: revision.contentFormat,
+      excerpt: revision.excerpt,
+      tags: revision.tags,
+      coverImageUrl: revision.coverImageUrl,
+      coverImageAlt: revision.coverImageAlt
+    }
+  });
+  return context.json({ id: story.id, restoredRevisionId: revision.id });
 });
 
 blogRouter.delete('/:id', async (context) => {
@@ -226,13 +455,15 @@ blogRouter.delete('/:id', async (context) => {
 
 blogRouter.get('/bulk', async (context) => {
   const prisma = db(context.env.DATABASE_URL);
+  await publishDueStories(prisma);
   const userId = context.get('userId');
-  const { page, limit, search, topic, savedOnly } = parseStoryListOptions({
+  const { page, limit, search, topic, savedOnly, sort } = parseStoryListOptions({
     page: context.req.query('page'),
     limit: context.req.query('limit'),
     search: context.req.query('search'),
     topic: context.req.query('topic'),
-    saved: context.req.query('saved')
+    saved: context.req.query('saved'),
+    sort: context.req.query('sort')
   });
 
   if (savedOnly && !userId) return context.json(unauthorized('Sign in to view your saved stories.'), 401);
@@ -256,7 +487,10 @@ blogRouter.get('/bulk', async (context) => {
   const [blogs, total] = await Promise.all([
     prisma.post.findMany({
       where,
-      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      orderBy:
+        sort === 'popular'
+          ? [{ claps: { _count: 'desc' } }, { createdAt: 'desc' }]
+          : [{ createdAt: sort === 'oldest' ? 'asc' : 'desc' }, { id: 'desc' }],
       skip: (page - 1) * limit,
       take: limit,
       select: {
@@ -266,6 +500,9 @@ blogRouter.get('/bulk', async (context) => {
         slug: true,
         excerpt: true,
         tags: true,
+        coverImageUrl: true,
+        coverImageAlt: true,
+        publishedAt: true,
         createdAt: true,
         author: { select: { id: true, name: true } },
         bookmarks: { where: { userId: userId || '__anonymous__' }, select: { userId: true } },
@@ -279,7 +516,7 @@ blogRouter.get('/bulk', async (context) => {
   return context.json({
     blogs: blogs.map(({ bookmarks, claps, _count, content, ...blog }) => ({
       ...blog,
-      contentPreview: createContentPreview(content),
+      contentPreview: createMarkdownPreview(content),
       readingTime: calculateReadingTime(content),
       saved: bookmarks.length > 0,
       liked: claps.length > 0,
@@ -355,6 +592,7 @@ blogRouter.post('/author/:id/follow', async (context) => {
 
 blogRouter.get('/:identifier', async (context) => {
   const prisma = db(context.env.DATABASE_URL);
+  await publishDueStories(prisma);
   const userId = context.get('userId');
   const blog = await prisma.post.findFirst({
     where: {
@@ -366,8 +604,12 @@ blogRouter.get('/:identifier', async (context) => {
       slug: true,
       title: true,
       content: true,
+      contentFormat: true,
       excerpt: true,
       tags: true,
+      coverImageUrl: true,
+      coverImageAlt: true,
+      publishedAt: true,
       createdAt: true,
       author: {
         select: {

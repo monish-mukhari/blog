@@ -2,6 +2,9 @@ name = "backend"
 compatibility_date = "2023-12-01"
 keep_vars = true
 
+[triggers]
+crons = ["*/5 * * * *"]
+
 # DATABASE_URL and JWT_SECRET are encrypted Worker secrets.
 # Configure them with `npx wrangler secret put <NAME>`; never commit them here.
 # Set FRONTEND_URL to the deployed frontend origin to restrict browser API access.

@@ -14,36 +14,76 @@ datasource db {
 }
 
 model User {
-  id       String   @id @default(uuid())
-  email    String   @unique
-  name     String?
-  password String
-  posts    Post[]
+  id        String       @id @default(uuid())
+  email     String       @unique
+  name      String?
+  password  String
+  posts     Post[]
+  media     MediaAsset[]
   bookmarks Bookmark[]
   claps     Clap[]
-  following Follow[] @relation("Following")
-  followers Follow[] @relation("Followers")
+  following Follow[]     @relation("Following")
+  followers Follow[]     @relation("Followers")
 }
 
 model Post {
-  id        String   @id @default(uuid())
-  slug      String   @unique
-  title     String
-  content   String
-  published Boolean  @default(false)
-  excerpt   String?
-  tags      String[] @default([])
-  clapCount Int      @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  publishedAt DateTime?
-  author    User     @relation(fields: [authorId], references: [id])
-  authorId  String
-  bookmarks Bookmark[]
-  claps     Clap[]
+  id            String         @id @default(uuid())
+  slug          String         @unique
+  title         String
+  content       String
+  contentFormat String         @default("markdown")
+  published     Boolean        @default(false)
+  excerpt       String?
+  tags          String[]       @default([])
+  coverImageUrl String?
+  coverImageAlt String?
+  clapCount     Int            @default(0)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  publishedAt   DateTime?
+  scheduledAt   DateTime?
+  author        User           @relation(fields: [authorId], references: [id])
+  authorId      String
+  sourcePost    Post?          @relation("PostEditDraft", fields: [sourcePostId], references: [id], onDelete: Cascade)
+  sourcePostId  String?        @unique
+  editDraft     Post?          @relation("PostEditDraft")
+  revisions     PostRevision[]
+  bookmarks     Bookmark[]
+  claps         Clap[]
 
   @@index([published, createdAt])
+  @@index([published, scheduledAt])
   @@index([authorId, updatedAt])
+}
+
+model PostRevision {
+  id            String   @id @default(uuid())
+  post          Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId        String
+  title         String
+  content       String
+  contentFormat String
+  excerpt       String?
+  tags          String[]
+  coverImageUrl String?
+  coverImageAlt String?
+  createdAt     DateTime @default(now())
+
+  @@index([postId, createdAt])
+}
+
+model MediaAsset {
+  id        String   @id @default(uuid())
+  owner     User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  ownerId   String
+  mimeType  String
+  data      Bytes
+  width     Int
+  height    Int
+  alt       String
+  createdAt DateTime @default(now())
+
+  @@index([ownerId, createdAt])
 }
 
 model Bookmark {

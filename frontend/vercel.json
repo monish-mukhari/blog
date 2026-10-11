@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+      "source": "/story/:slug",
+      "destination": "https://backend.manishmukherjee91.workers.dev/render/:slug"
+    },
+    {
       "source": "/sitemap.xml",
       "destination": "https://backend.manishmukherjee91.workers.dev/sitemap.xml"
     },

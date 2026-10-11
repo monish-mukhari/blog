@@ -13,6 +13,7 @@ interface IconProps {
     | 'share'
     | 'check'
     | 'spark'
+    | 'chevronDown'
     | 'menu'
     | 'close';
   size?: number;
@@ -79,6 +80,7 @@ export const Icon = ({ name, size = 20, filled = false }: IconProps) => {
     spark: (
       <path d="m12 3 1.3 4.2L17 9l-3.7 1.8L12 15l-1.3-4.2L7 9l3.7-1.8ZM5 15l.7 2.3L8 18l-2.3.7L5 21l-.7-2.3L2 18l2.3-.7Z" />
     ),
+    chevronDown: <path d="m6 9 6 6 6-6" />,
     menu: (
       <>
         <path d="M4 7h16M4 12h16M4 17h16" />

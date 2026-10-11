@@ -137,15 +137,88 @@ a[class~='border-[var(--ink)]'] {
   font-size: clamp(1.15rem, 1.6vw, 1.32rem);
   line-height: 1.85;
   color: var(--ink);
-  white-space: pre-wrap;
 }
-.article-body::first-letter {
+.article-body > p:first-child::first-letter {
   float: left;
   font-size: 4.5rem;
   line-height: 0.8;
   padding: 0.16em 0.12em 0 0;
   color: var(--blue);
   font-weight: 700;
+}
+.markdown-article p,
+.markdown-article ul,
+.markdown-article ol,
+.markdown-article blockquote,
+.markdown-article pre {
+  margin: 1.35em 0;
+}
+.markdown-article h2,
+.markdown-article h3,
+.markdown-article h4 {
+  margin: 1.8em 0 0.7em;
+  font-family: 'Newsreader', Georgia, serif;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.markdown-article h2 {
+  font-size: 2rem;
+}
+.markdown-article h3 {
+  font-size: 1.55rem;
+}
+.markdown-article ul,
+.markdown-article ol {
+  padding-left: 1.5em;
+}
+.markdown-article ul {
+  list-style: disc;
+}
+.markdown-article ol {
+  list-style: decimal;
+}
+.markdown-article blockquote {
+  border-left: 4px solid var(--blue);
+  padding: 0.4em 0 0.4em 1.2em;
+  color: var(--muted);
+}
+.markdown-article a {
+  color: var(--blue);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.markdown-article pre {
+  overflow-x: auto;
+  border-radius: 12px;
+  background: #10213d;
+  padding: 1.2rem;
+  color: #f8fafc;
+}
+.markdown-article :not(pre) > code {
+  border-radius: 5px;
+  background: #eff6ff;
+  padding: 0.15em 0.35em;
+  font-family: ui-monospace, monospace;
+  font-size: 0.88em;
+}
+.markdown-article img {
+  display: block;
+  max-height: 680px;
+  width: 100%;
+  border-radius: 14px;
+  object-fit: contain;
+}
+.article-figure {
+  display: block;
+  margin: 2rem 0;
+}
+.article-caption {
+  display: block;
+  margin-top: 0.65rem;
+  text-align: center;
+  font-family: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.82rem;
+  color: var(--muted);
 }
 
 @keyframes float-in {

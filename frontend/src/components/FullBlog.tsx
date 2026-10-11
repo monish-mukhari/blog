@@ -9,6 +9,7 @@ import { Avatar, StoryArt } from './BlogCard';
 import { setStorySaved } from '../lib/interactions';
 import { applyStoryMetadata } from '../lib/metadata';
 import { Icon } from './Icon';
+import { MarkdownArticle } from './MarkdownArticle';
 
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem('token') || ''}` });
 export const FullBlog = ({ blog }: { blog: Blog }) => {
@@ -29,9 +30,21 @@ export const FullBlog = ({ blog }: { blog: Blog }) => {
       description,
       canonicalUrl: `${window.location.origin}${storyPath}`,
       author: blog.author.name || 'Anonymous',
-      publishedAt: blog.createdAt
+      publishedAt: blog.publishedAt || blog.createdAt,
+      updatedAt: blog.updatedAt,
+      imageUrl: blog.coverImageUrl || `${window.location.origin}/og-default.png`
     });
-  }, [blog.author.name, blog.content, blog.createdAt, blog.excerpt, blog.title, storyPath]);
+  }, [
+    blog.author.name,
+    blog.content,
+    blog.coverImageUrl,
+    blog.createdAt,
+    blog.excerpt,
+    blog.publishedAt,
+    blog.title,
+    blog.updatedAt,
+    storyPath
+  ]);
 
   const tell = (message: string) => {
     setNotice(message);
@@ -116,7 +129,7 @@ export const FullBlog = ({ blog }: { blog: Blog }) => {
     }
   };
   const share = async () => {
-    const shareUrl = blog.slug ? `${BACKEND_URL}/share/${blog.slug}` : window.location.href;
+    const shareUrl = `${window.location.origin}${storyPath}`;
     try {
       if (navigator.share) await navigator.share({ title: blog.title, url: shareUrl });
       else {
@@ -152,7 +165,15 @@ export const FullBlog = ({ blog }: { blog: Blog }) => {
           </div>
         </header>
         <div className="container-main max-w-6xl">
-          <StoryArt title={blog.title} large />
+          {blog.coverImageUrl ? (
+            <img
+              src={blog.coverImageUrl}
+              alt={blog.coverImageAlt || ''}
+              className="max-h-[620px] w-full rounded-[20px] object-cover"
+            />
+          ) : (
+            <StoryArt title={blog.title} large />
+          )}
         </div>
         <div className="container-main grid max-w-5xl gap-10 py-14 md:grid-cols-[64px_1fr_220px]">
           <aside className="order-2 flex gap-2 md:order-1 md:flex-col">
@@ -172,7 +193,9 @@ export const FullBlog = ({ blog }: { blog: Blog }) => {
             />
             <Action label="Share" onClick={share} icon="share" />
           </aside>
-          <article className="article-body order-1 min-w-0 md:order-2">{blog.content}</article>
+          <article className="order-1 min-w-0 md:order-2">
+            <MarkdownArticle content={blog.content || ''} />
+          </article>
           <aside className="order-3">
             <div className="sticky top-28 rounded-[18px] border border-[var(--line)] bg-[var(--surface)] p-5">
               <p className="text-xs font-bold uppercase tracking-[.14em] text-[var(--muted)]">Written by</p>
