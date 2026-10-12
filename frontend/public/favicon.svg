@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title description">
+  <title id="title">Inkwell</title>
+  <desc id="description">A white lowercase i and period on an Inkwell blue rounded square.</desc>
+  <rect width="64" height="64" rx="15" fill="#2563eb" />
+  <path
+    fill="#fff"
+    d="M27 23.5h8V46h-8V23.5Zm4-12a4.75 4.75 0 1 1 0 9.5 4.75 4.75 0 0 1 0-9.5ZM41 38h8v8h-8v-8Z"
+  />
+</svg>

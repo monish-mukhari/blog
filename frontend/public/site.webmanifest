@@ -1,0 +1,17 @@
+{
+  "name": "Inkwell",
+  "short_name": "Inkwell",
+  "description": "A thoughtful place to read, write, learn, and share ideas.",
+  "start_url": "/blogs",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2563eb",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
