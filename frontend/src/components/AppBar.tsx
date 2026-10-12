@@ -83,6 +83,30 @@ export const AppBar = ({ search, onSearch }: AppBarProps) => {
                 <Icon name="write" size={17} />
                 My stories
               </Link>
+              <Link
+                to="/blogs?view=following"
+                className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm hover:bg-[var(--surface)]"
+              >
+                Following feed
+              </Link>
+              <Link
+                to="/learning/continue"
+                className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm hover:bg-[var(--surface)]"
+              >
+                Continue reading
+              </Link>
+              <Link
+                to="/notifications"
+                className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm hover:bg-[var(--surface)]"
+              >
+                Notifications
+              </Link>
+              <Link
+                to="/settings/profile"
+                className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm hover:bg-[var(--surface)]"
+              >
+                Profile settings
+              </Link>
               <button
                 type="button"
                 onClick={signOut}

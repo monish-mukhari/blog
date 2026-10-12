@@ -17,16 +17,37 @@ export interface Blog {
   updatedAt?: string;
   coverImageUrl?: string;
   coverImageAlt?: string;
+  learningOutcomes?: string[];
+  prerequisites?: string[];
+  difficulty?: 'beginner' | 'intermediate' | 'advanced';
+  references?: string[];
+  lastReviewedAt?: string;
+  readingProgress?: number;
+  series?: { id: string; slug: string; title: string };
+  seriesOrder?: number;
+  seriesStories?: { id: string; slug: string; title: string; seriesOrder?: number }[];
+  relatedStories?: { id: string; slug: string; title: string; excerpt?: string; coverImageUrl?: string }[];
+  quizQuestions?: { id: string; question: string; options: string[]; position: number }[];
   clapCount?: number;
   saved?: boolean;
   liked?: boolean;
-  author: { id: string; name?: string; followed?: boolean; followerCount?: number };
+  author: {
+    id: string;
+    name?: string;
+    username?: string;
+    headline?: string;
+    bio?: string;
+    avatarUrl?: string;
+    followed?: boolean;
+    followerCount?: number;
+  };
 }
 
 interface BlogQuery {
   search?: string;
   topic?: string;
   saved?: boolean;
+  following?: boolean;
   sort?: 'newest' | 'oldest' | 'popular';
 }
 
@@ -60,7 +81,13 @@ export const useBlog = ({ id }: { id: string }) => {
   return { loading, blog, error };
 };
 
-export const useBlogs = ({ search = '', topic = '', saved = false, sort = 'newest' }: BlogQuery) => {
+export const useBlogs = ({
+  search = '',
+  topic = '',
+  saved = false,
+  following = false,
+  sort = 'newest'
+}: BlogQuery) => {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [blogs, setBlogs] = useState<Blog[]>([]);
@@ -82,6 +109,7 @@ export const useBlogs = ({ search = '', topic = '', saved = false, sort = 'newes
             search: search || undefined,
             topic: topic || undefined,
             saved: saved || undefined,
+            following: following || undefined,
             sort
           }
         });
@@ -112,7 +140,7 @@ export const useBlogs = ({ search = '', topic = '', saved = false, sort = 'newes
         }
       }
     },
-    [saved, search, sort, topic]
+    [following, saved, search, sort, topic]
   );
 
   useEffect(() => {

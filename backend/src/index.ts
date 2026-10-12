@@ -4,9 +4,12 @@ import { blogRouter } from './routes/blog';
 import { mediaRouter, serveMedia } from './routes/media';
 import { seoRouter } from './routes/seo';
 import { userRouter } from './routes/user';
+import { learningRouter } from './routes/learning';
+import { communityRouter } from './routes/community';
 import { logError, logEvent, reportError } from './observability';
 import { createDatabase } from './db';
 import { publishDueStories } from './publishing';
+import { sendDueDigests } from './digests';
 
 type Bindings = {
   DATABASE_URL: string;
@@ -14,6 +17,8 @@ type Bindings = {
   FRONTEND_URL?: string;
   ERROR_MONITOR_URL?: string;
   ERROR_MONITOR_TOKEN?: string;
+  DIGEST_WEBHOOK_URL?: string;
+  DIGEST_WEBHOOK_TOKEN?: string;
 };
 
 const app = new Hono<{
@@ -44,7 +49,7 @@ app.use(
       return null;
     },
     allowHeaders: ['Content-Type', 'Authorization'],
-    allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
+    allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']
   })
 );
 app.get('/health', (context) => context.json({ status: 'ok' }));
@@ -64,6 +69,8 @@ app.route('/', seoRouter);
 app.route('/api/v1/user', userRouter);
 app.route('/api/v1/blog', blogRouter);
 app.route('/api/v1/media', mediaRouter);
+app.route('/api/v1/learning', learningRouter);
+app.route('/api/v1/community', communityRouter);
 app.notFound((context) => context.json({ error: 'Not found' }, 404));
 app.onError((error, context) => {
   logError('unhandled_request_error', error, {
@@ -83,9 +90,11 @@ export { app };
 export default {
   fetch: app.fetch,
   async scheduled(_event: ScheduledEvent, env: Bindings, context: ExecutionContext) {
+    const prisma = createDatabase(env.DATABASE_URL);
     context.waitUntil(
-      publishDueStories(createDatabase(env.DATABASE_URL)).then((published) => {
+      Promise.all([publishDueStories(prisma), sendDueDigests(prisma, env)]).then(([published, digests]) => {
         logEvent('scheduled_publication_completed', { published });
+        logEvent('scheduled_digest_completed', { digests });
       })
     );
   }

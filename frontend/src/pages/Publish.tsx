@@ -5,8 +5,10 @@ import { AppBar } from '../components/AppBar';
 import { Icon } from '../components/Icon';
 import { ImageUploader } from '../components/ImageUploader';
 import { MarkdownArticle } from '../components/MarkdownArticle';
+import { LearningEditor } from '../components/LearningEditor';
 import { BACKEND_URL } from '../config';
 import { readTime } from '../lib/blog';
+import { emptyLearningDraft, LearningDraft } from '../lib/learning-draft';
 
 const topics = ['Design', 'Technology', 'Culture', 'Work', 'Life'];
 const LOCAL_DRAFT_KEY = 'inkwell-draft';
@@ -21,6 +23,7 @@ interface Draft {
   coverImageAlt: string;
   sourcePostId?: string;
   scheduledAt?: string;
+  learning: LearningDraft;
 }
 
 const emptyDraft: Draft = {
@@ -29,7 +32,8 @@ const emptyDraft: Draft = {
   content: '',
   topic: 'Design',
   coverImageUrl: '',
-  coverImageAlt: ''
+  coverImageAlt: '',
+  learning: emptyLearningDraft
 };
 const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem('token') || ''}` });
 
@@ -47,7 +51,8 @@ const loadLocalDraft = (): Draft => {
       coverImageUrl: parsed.coverImageUrl || '',
       coverImageAlt: parsed.coverImageAlt || '',
       sourcePostId: parsed.sourcePostId,
-      scheduledAt: parsed.scheduledAt
+      scheduledAt: parsed.scheduledAt,
+      learning: { ...emptyLearningDraft, ...(parsed.learning || {}) }
     };
   } catch {
     localStorage.removeItem(LOCAL_DRAFT_KEY);
@@ -67,6 +72,7 @@ export const Publish = () => {
   const [coverImageAlt, setCoverImageAlt] = useState(initial.coverImageAlt);
   const [sourcePostId, setSourcePostId] = useState(initial.sourcePostId);
   const [scheduledAt, setScheduledAt] = useState(initial.scheduledAt || '');
+  const [learning, setLearning] = useState(initial.learning);
   const [scheduleValue, setScheduleValue] = useState('');
   const [previewing, setPreviewing] = useState(false);
   const [dirty, setDirty] = useState(false);
@@ -97,6 +103,16 @@ export const Publish = () => {
         setCoverImageAlt(draft.coverImageAlt || '');
         setSourcePostId(draft.sourcePostId);
         setScheduledAt(draft.scheduledAt || '');
+        setLearning({
+          learningOutcomes: draft.learningOutcomes || [],
+          prerequisites: draft.prerequisites || [],
+          difficulty: draft.difficulty || '',
+          references: draft.references || [],
+          lastReviewedAt: draft.lastReviewedAt || '',
+          seriesId: draft.seriesId || '',
+          seriesOrder: draft.seriesOrder || undefined,
+          quizQuestions: draft.quizQuestions || []
+        });
         setDirty(false);
         setStatus(draft.scheduledAt ? 'Scheduled publication' : 'Draft loaded');
       })
@@ -131,9 +147,21 @@ export const Publish = () => {
       coverImageUrl,
       coverImageAlt,
       sourcePostId,
-      scheduledAt
+      scheduledAt,
+      learning
     }),
-    [content, coverImageAlt, coverImageUrl, draftId, excerpt, scheduledAt, sourcePostId, title, topic]
+    [
+      content,
+      coverImageAlt,
+      coverImageUrl,
+      draftId,
+      excerpt,
+      learning,
+      scheduledAt,
+      sourcePostId,
+      title,
+      topic
+    ]
   );
 
   const storeLocally = useCallback(
@@ -161,7 +189,18 @@ export const Publish = () => {
             contentFormat: 'markdown',
             tags: [topic],
             coverImageUrl,
-            coverImageAlt
+            coverImageAlt,
+            ...learning,
+            difficulty: learning.difficulty || null,
+            lastReviewedAt: learning.lastReviewedAt || null,
+            seriesId: learning.seriesId || null,
+            seriesOrder: learning.seriesOrder || null,
+            quizQuestions: learning.quizQuestions.filter(
+              (question) =>
+                question.question.trim().length >= 5 &&
+                question.options.length >= 2 &&
+                question.options.every((option) => option.trim())
+            )
           },
           { headers: authHeaders() }
         );
@@ -194,6 +233,7 @@ export const Publish = () => {
       coverImageUrl,
       draftId,
       excerpt,
+      learning,
       navigate,
       routeDraftId,
       serverDraftsUnavailable,
@@ -215,6 +255,7 @@ export const Publish = () => {
     coverImageUrl,
     dirty,
     excerpt,
+    learning,
     persistDraft,
     serverDraftsUnavailable,
     storeLocally,
@@ -491,6 +532,7 @@ export const Publish = () => {
                 includeCaption
                 onUploaded={insertImage}
               />
+              <LearningEditor value={learning} onChange={(value) => update(setLearning, value)} />
               <section className="rounded-xl border border-[var(--line)] bg-white p-4">
                 <h3 className="text-sm font-semibold">Schedule publication</h3>
                 <p className="mt-1 text-xs leading-5 text-[var(--muted)]">

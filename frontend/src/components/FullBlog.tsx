@@ -1,6 +1,6 @@
 import axios from 'axios';
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { BACKEND_URL } from '../config';
 import { Blog } from '../hooks';
 import { blogCategory, formatDate, readTime } from '../lib/blog';
@@ -10,6 +10,8 @@ import { setStorySaved } from '../lib/interactions';
 import { applyStoryMetadata } from '../lib/metadata';
 import { Icon } from './Icon';
 import { MarkdownArticle } from './MarkdownArticle';
+import { LearningOverview, ReaderNotes, StoryConnections, StoryQuiz, TableOfContents } from './StoryLearning';
+import { Discussion } from './Discussion';
 
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem('token') || ''}` });
 export const FullBlog = ({ blog }: { blog: Blog }) => {
@@ -21,6 +23,8 @@ export const FullBlog = ({ blog }: { blog: Blog }) => {
   const [followerCount, setFollowerCount] = useState(blog.author.followerCount || 0);
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState('');
+  const [progress, setProgress] = useState(blog.readingProgress || 0);
+  const lastSavedProgress = useRef(blog.readingProgress || 0);
   const storyPath = blog.slug ? `/story/${blog.slug}` : `/blog/${blog.id}`;
 
   useEffect(() => {
@@ -45,6 +49,47 @@ export const FullBlog = ({ blog }: { blog: Blog }) => {
     blog.updatedAt,
     storyPath
   ]);
+
+  useEffect(() => {
+    if (!localStorage.getItem('token')) return;
+    let timer = 0;
+    const updateProgress = () => {
+      const article = document.getElementById('story-content');
+      if (!article) return;
+      const start = article.offsetTop;
+      const distance = Math.max(1, article.offsetHeight - window.innerHeight * 0.5);
+      const next = Math.max(0, Math.min(1, (window.scrollY - start + window.innerHeight * 0.35) / distance));
+      setProgress(next);
+      if (next - lastSavedProgress.current < 0.05 && next < 0.95) return;
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        lastSavedProgress.current = next;
+        void axios.put(
+          `${BACKEND_URL}/api/v1/learning/stories/${blog.id}/progress`,
+          { progress: next },
+          { headers: auth() }
+        );
+      }, 500);
+    };
+    window.addEventListener('scroll', updateProgress, { passive: true });
+    updateProgress();
+    return () => {
+      window.removeEventListener('scroll', updateProgress);
+      window.clearTimeout(timer);
+    };
+  }, [blog.id]);
+
+  useEffect(() => {
+    const saved = blog.readingProgress || 0;
+    if (saved < 0.05 || saved >= 0.95) return;
+    const timer = window.setTimeout(() => {
+      const article = document.getElementById('story-content');
+      if (!article) return;
+      const distance = Math.max(0, article.offsetHeight - window.innerHeight * 0.5);
+      window.scrollTo({ top: article.offsetTop + distance * saved, behavior: 'smooth' });
+    }, 350);
+    return () => window.clearTimeout(timer);
+  }, [blog.id, blog.readingProgress]);
 
   const tell = (message: string) => {
     setNotice(message);
@@ -143,6 +188,11 @@ export const FullBlog = ({ blog }: { blog: Blog }) => {
   return (
     <div className="page-shell">
       <AppBar />
+      <div
+        className="fixed left-0 top-[72px] z-30 h-1 bg-[#2563eb] transition-[width]"
+        style={{ width: `${Math.round(progress * 100)}%` }}
+        aria-hidden="true"
+      />
       <main>
         <header className="container-main max-w-5xl pb-12 pt-16 text-center">
           <span className="inline-block rounded-lg bg-[#eff6ff] px-4 py-2 text-xs font-bold uppercase tracking-[.15em] text-[#2563eb]">
@@ -157,7 +207,12 @@ export const FullBlog = ({ blog }: { blog: Blog }) => {
           <div className="mt-8 flex items-center justify-center gap-3">
             <Avatar size="big" name={blog.author.name || 'Anonymous'} />
             <div className="text-left text-sm">
-              <p className="font-semibold">{blog.author.name || 'Anonymous'}</p>
+              <Link
+                to={`/author/${blog.author.username || blog.author.id}`}
+                className="font-semibold hover:text-[#2563eb]"
+              >
+                {blog.author.name || 'Anonymous'}
+              </Link>
               <p className="text-[var(--muted)]">
                 {formatDate(blog.createdAt)} · {readTime(blog.content)} min read
               </p>
@@ -193,8 +248,11 @@ export const FullBlog = ({ blog }: { blog: Blog }) => {
             />
             <Action label="Share" onClick={share} icon="share" />
           </aside>
-          <article className="order-1 min-w-0 md:order-2">
+          <article id="story-content" className="order-1 min-w-0 md:order-2">
+            <LearningOverview blog={blog} />
             <MarkdownArticle content={blog.content || ''} />
+            <ReaderNotes postId={blog.id} />
+            <StoryQuiz questions={blog.quizQuestions} />
           </article>
           <aside className="order-3">
             <div className="sticky top-28 rounded-[18px] border border-[var(--line)] bg-[var(--surface)] p-5">
@@ -202,14 +260,21 @@ export const FullBlog = ({ blog }: { blog: Blog }) => {
               <div className="mt-4 flex items-center gap-3">
                 <Avatar size="big" name={blog.author.name || 'Anonymous'} />
                 <div>
-                  <p className="font-semibold">{blog.author.name || 'Anonymous'}</p>
+                  <Link
+                    to={`/author/${blog.author.username || blog.author.id}`}
+                    className="font-semibold hover:text-[#2563eb]"
+                  >
+                    {blog.author.name || 'Anonymous'}
+                  </Link>
                   <p className="text-xs text-[var(--muted)]">
                     {followerCount} follower{followerCount === 1 ? '' : 's'}
                   </p>
                 </div>
               </div>
               <p className="mt-4 text-sm leading-6 text-[var(--muted)]">
-                Curious mind, careful observer, and contributor to the Inkwell community.
+                {blog.author.bio ||
+                  blog.author.headline ||
+                  'Curious mind, careful observer, and contributor to the Inkwell community.'}
               </p>
               <button
                 type="button"
@@ -220,8 +285,13 @@ export const FullBlog = ({ blog }: { blog: Blog }) => {
                 {followed ? 'Following' : 'Follow'}
               </button>
             </div>
+            <div className="mt-4">
+              <TableOfContents content={blog.content || ''} />
+            </div>
           </aside>
         </div>
+        <StoryConnections blog={blog} />
+        <Discussion postId={blog.id} />
       </main>
       {notice && (
         <div

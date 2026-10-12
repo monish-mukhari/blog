@@ -12,6 +12,7 @@ const SEARCH_DELAY_MS = 350;
 export const Blogs = () => {
   const [params, setParams] = useSearchParams();
   const savedView = params.get('view') === 'saved';
+  const followingView = params.get('view') === 'following';
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [category, setCategory] = useState('For you');
@@ -37,6 +38,7 @@ export const Blogs = () => {
     search: debouncedSearch,
     topic: category === 'For you' ? '' : category,
     saved: savedView,
+    following: followingView,
     sort
   });
 
@@ -55,25 +57,35 @@ export const Blogs = () => {
           <div>
             <p className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-[.18em] text-[#2563eb]">
               <Icon name={savedView ? 'bookmark' : 'spark'} size={16} />
-              {savedView ? 'Your personal library' : 'Fresh perspectives, daily'}
+              {savedView
+                ? 'Your personal library'
+                : followingView
+                  ? 'Writers you follow'
+                  : 'Fresh perspectives, daily'}
             </p>
             <h1 className="font-display text-5xl font-semibold tracking-[-.035em] md:text-7xl">
               {savedView ? (
                 'Stories you'
+              ) : followingView ? (
+                'Your following'
               ) : (
                 <>
                   Stories worth
                   <br />
                 </>
               )}
-              <em className="font-medium text-[#2563eb]">{savedView ? ' saved.' : ' staying for.'}</em>
+              <em className="font-medium text-[#2563eb]">
+                {savedView ? ' saved.' : followingView ? ' feed.' : ' staying for.'}
+              </em>
             </h1>
           </div>
           <div className="max-w-sm text-sm leading-6 text-[var(--muted)]">
             <p>
               {savedView
                 ? 'Everything you bookmarked, gathered in one quiet place.'
-                : 'Ideas, experiences, and useful lessons from curious people around the world.'}
+                : followingView
+                  ? 'New work from authors whose ideas you want to keep learning from.'
+                  : 'Ideas, experiences, and useful lessons from curious people around the world.'}
             </p>
             {!loading && !error && (
               <p className="mt-2 font-semibold text-[var(--ink)]">

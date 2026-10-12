@@ -2,7 +2,7 @@
 
 Inkwell is a full-stack publishing platform for reading, writing, and sharing thoughtful stories. It combines a responsive editorial interface with account-based bookmarks, appreciation, author following, draft autosave, and a serverless API.
 
-Current delivery status, implementation context, and next phases are maintained in [`PROJECT_STATUS.md`](PROJECT_STATUS.md). See [`docs/SEO_GUIDE.md`](docs/SEO_GUIDE.md) for the visual SEO guide and [`docs/PUBLISHING_WORKFLOW.md`](docs/PUBLISHING_WORKFLOW.md) for the complete authoring lifecycle.
+Current delivery status, implementation context, and next phases are maintained in [`PROJECT_STATUS.md`](PROJECT_STATUS.md). See [`docs/SEO_GUIDE.md`](docs/SEO_GUIDE.md) for the visual SEO guide, [`docs/PUBLISHING_WORKFLOW.md`](docs/PUBLISHING_WORKFLOW.md) for the authoring lifecycle, and [`docs/LEARNING_AND_COMMUNITY.md`](docs/LEARNING_AND_COMMUNITY.md) for Phases 3 and 4.
 
 ![React](https://img.shields.io/badge/React-18-149ECA?logo=react&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)
@@ -25,6 +25,12 @@ Current delivery status, implementation context, and next phases are maintained 
 - Account-synced bookmarks and a saved-story library
 - Account-synced appreciation counts
 - Author follow and unfollow support
+- Public author profiles, archives, and a dedicated following feed
+- Generated tables of contents, reading progress, resumption, and private notes
+- Learning outcomes, prerequisites, difficulty, references, series, and knowledge checks
+- Threaded discussions, replies, mentions, notifications, and author moderation
+- Configurable daily/weekly email digest delivery through an authenticated webhook
+- Report, mute, and block safety controls
 - Native sharing with clipboard fallback
 - Readable story URLs, dynamic article metadata, RSS, and sitemap support
 - Loading, empty, expired-session, error, and 404 states
@@ -148,6 +154,8 @@ Open `http://localhost:5173`.
 | `FRONTEND_URL` | Cloudflare Worker | Deployed frontend origin used by CORS and canonical SEO URLs |
 | `ERROR_MONITOR_URL` | Cloudflare Worker | Optional HTTPS webhook for structured production error events |
 | `ERROR_MONITOR_TOKEN` | Cloudflare Worker | Optional bearer token for the monitoring webhook |
+| `DIGEST_WEBHOOK_URL` | Cloudflare Worker | Optional email-service endpoint that receives due digest payloads |
+| `DIGEST_WEBHOOK_TOKEN` | Cloudflare Worker | Optional bearer token for authenticated digest delivery |
 
 Production variables should be configured as encrypted Cloudflare Worker secrets or dashboard-managed runtime variables. The repository sets `keep_vars = true`, so Wrangler deployments preserve variables managed in the Cloudflare dashboard.
 
@@ -200,6 +208,16 @@ npm run deploy    # Generate the engine-free Prisma client and deploy
 | `POST`   | `/api/v1/blog/:id/bookmark`      | Save or unsave a story                                                   |
 | `POST`   | `/api/v1/blog/:id/clap`          | Add or remove appreciation                                               |
 | `POST`   | `/api/v1/blog/author/:id/follow` | Follow or unfollow an author                                             |
+| `GET`    | `/api/v1/learning/continue`     | List unfinished stories for the current reader                           |
+| `PUT`    | `/api/v1/learning/stories/:id/progress` | Synchronize private reading progress                              |
+| `GET/POST` | `/api/v1/learning/stories/:id/notes` | Manage private story notes and captured quotations                  |
+| `POST`   | `/api/v1/learning/quiz/:id/attempt` | Evaluate and save a knowledge-check answer                           |
+| `GET/PUT` | `/api/v1/community/profile/me` | Read or update the current reader's profile                              |
+| `GET`    | `/api/v1/community/profile/:identifier` | Read a public author profile                                      |
+| `GET/POST` | `/api/v1/community/posts/:id/comments` | Read or join a threaded discussion                                |
+| `GET`    | `/api/v1/community/notifications` | Read the private notification inbox                                     |
+| `POST`   | `/api/v1/community/users/:id/:action` | Apply a `mute` or `block` safety action                              |
+| `POST`   | `/api/v1/community/reports`     | Submit a content or account report                                       |
 | `POST`   | `/api/v1/media`                  | Processed authenticated image upload                                     |
 | `GET`    | `/media/:id`                     | Serve immutable uploaded media                                           |
 

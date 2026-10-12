@@ -116,9 +116,10 @@ export const BlogCard = ({ blog, featured = false }: { blog: Blog; featured?: bo
       <CardArt blog={blog} />
       <div className="flex flex-1 flex-col px-1 pb-1 pt-5">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-bold uppercase tracking-[.12em] text-[#2563eb]">
-            {blogCategory(blog)}
-          </span>
+          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[.12em] text-[#2563eb]">
+            <span>{blogCategory(blog)}</span>
+            {blog.difficulty && <span className="text-[var(--muted)]">· {blog.difficulty}</span>}
+          </div>
           <button
             onClick={toggle}
             disabled={busy}
@@ -132,6 +133,19 @@ export const BlogCard = ({ blog, featured = false }: { blog: Blog; featured?: bo
           {blog.title}
         </h2>
         <p className="mt-3 line-clamp-3 text-sm leading-6 text-[var(--muted)]">{excerpt(blog)}</p>
+        {Boolean(blog.readingProgress) && (
+          <div className="mt-4" aria-label={`${Math.round((blog.readingProgress || 0) * 100)} percent read`}>
+            <div className="h-1.5 overflow-hidden rounded-full bg-[var(--line)]">
+              <div
+                className="h-full rounded-full bg-[#2563eb]"
+                style={{ width: `${(blog.readingProgress || 0) * 100}%` }}
+              />
+            </div>
+            <p className="mt-1 text-[10px] font-semibold text-[var(--muted)]">
+              Continue at {Math.round((blog.readingProgress || 0) * 100)}%
+            </p>
+          </div>
+        )}
         <div className="mt-6 border-t border-[var(--line)] pt-4">
           <AuthorLine blog={blog} />
         </div>

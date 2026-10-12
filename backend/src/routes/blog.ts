@@ -21,6 +21,52 @@ const db = createDatabase;
 
 const unauthorized = (message = 'Please sign in to continue.') => ({ error: message });
 
+const learningData = (data: {
+  learningOutcomes?: string[];
+  prerequisites?: string[];
+  difficulty?: 'beginner' | 'intermediate' | 'advanced' | null;
+  references?: string[];
+  lastReviewedAt?: string | null;
+  seriesId?: string | null;
+  seriesOrder?: number | null;
+}) => ({
+  learningOutcomes: data.learningOutcomes || [],
+  prerequisites: data.prerequisites || [],
+  difficulty: data.difficulty || null,
+  references: data.references || [],
+  lastReviewedAt: data.lastReviewedAt ? new Date(data.lastReviewedAt) : null,
+  seriesId: data.seriesId || null,
+  seriesOrder: data.seriesOrder || null
+});
+
+const replaceQuiz = async (
+  prisma: ReturnType<typeof db>,
+  postId: string,
+  questions:
+    { question: string; options: string[]; correctIndex: number; explanation?: string | null }[] | undefined
+) => {
+  if (!questions) return;
+  await prisma.quizQuestion.deleteMany({ where: { postId } });
+  if (questions.length)
+    await prisma.quizQuestion.createMany({
+      data: questions.map((question, position) => ({
+        postId,
+        question: question.question,
+        options: question.options,
+        correctIndex: question.correctIndex,
+        explanation: question.explanation || null,
+        position
+      }))
+    });
+};
+
+const ownsSeries = async (prisma: ReturnType<typeof db>, userId: string, seriesId?: string | null) => {
+  if (!seriesId) return true;
+  return Boolean(
+    await prisma.series.findFirst({ where: { id: seriesId, ownerId: userId }, select: { id: true } })
+  );
+};
+
 // Published stories are public. A valid token enriches responses with the reader's
 // bookmark, appreciation, and follow state; invalid or missing tokens remain anonymous.
 blogRouter.use('/*', async (context, next) => {
@@ -53,6 +99,8 @@ blogRouter.post('/', async (context) => {
       400
     );
   }
+  if (!(await ownsSeries(prisma, userId, parsed.data.seriesId)))
+    return context.json({ error: 'Choose one of your own learning series.' }, 400);
 
   const id = crypto.randomUUID();
   const blog = await prisma.post.create({
@@ -66,11 +114,13 @@ blogRouter.post('/', async (context) => {
       tags: parsed.data.tags || [],
       coverImageUrl: parsed.data.coverImageUrl || null,
       coverImageAlt: parsed.data.coverImageAlt || null,
+      ...learningData(parsed.data),
       published: true,
       publishedAt: new Date(),
       authorId: userId
     }
   });
+  await replaceQuiz(prisma, blog.id, parsed.data.quizQuestions);
   return context.json({ id: blog.id, slug: blog.slug }, 201);
 });
 
@@ -82,6 +132,8 @@ blogRouter.put('/', async (context) => {
   const body = await context.req.json();
   const parsed = updateBlogInput.safeParse(body);
   if (!parsed.success) return context.json({ error: 'Invalid story content.' }, 400);
+  if (!(await ownsSeries(prisma, userId, parsed.data.seriesId)))
+    return context.json({ error: 'Choose one of your own learning series.' }, 400);
 
   const existing = await prisma.post.findFirst({
     where: { id: parsed.data.id, authorId: userId }
@@ -99,9 +151,11 @@ blogRouter.put('/', async (context) => {
       excerpt: parsed.data.excerpt,
       tags: parsed.data.tags,
       coverImageUrl: parsed.data.coverImageUrl || null,
-      coverImageAlt: parsed.data.coverImageAlt || null
+      coverImageAlt: parsed.data.coverImageAlt || null,
+      ...learningData(parsed.data)
     }
   });
+  await replaceQuiz(prisma, existing.id, parsed.data.quizQuestions);
   return context.json({ message: 'Story updated' });
 });
 
@@ -112,6 +166,8 @@ blogRouter.post('/drafts', async (context) => {
   const prisma = db(context.env.DATABASE_URL);
   const parsed = draftBlogInput.safeParse(await context.req.json());
   if (!parsed.success) return context.json({ error: 'Invalid draft content.' }, 400);
+  if (!(await ownsSeries(prisma, userId, parsed.data.seriesId)))
+    return context.json({ error: 'Choose one of your own learning series.' }, 400);
 
   const data = {
     title: parsed.data.title,
@@ -120,7 +176,8 @@ blogRouter.post('/drafts', async (context) => {
     excerpt: parsed.data.excerpt || null,
     tags: parsed.data.tags || [],
     coverImageUrl: parsed.data.coverImageUrl || null,
-    coverImageAlt: parsed.data.coverImageAlt || null
+    coverImageAlt: parsed.data.coverImageAlt || null,
+    ...learningData(parsed.data)
   };
 
   if (parsed.data.id) {
@@ -133,6 +190,7 @@ blogRouter.post('/drafts', async (context) => {
       where: { id: parsed.data.id },
       select: { id: true, updatedAt: true }
     });
+    await replaceQuiz(prisma, parsed.data.id, parsed.data.quizQuestions);
     return context.json({ draft });
   }
 
@@ -147,6 +205,7 @@ blogRouter.post('/drafts', async (context) => {
     },
     select: { id: true, updatedAt: true }
   });
+  await replaceQuiz(prisma, draft.id, parsed.data.quizQuestions);
   return context.json({ draft }, 201);
 });
 
@@ -166,6 +225,17 @@ blogRouter.get('/drafts/:id', async (context) => {
       tags: true,
       coverImageUrl: true,
       coverImageAlt: true,
+      learningOutcomes: true,
+      prerequisites: true,
+      difficulty: true,
+      references: true,
+      lastReviewedAt: true,
+      seriesId: true,
+      seriesOrder: true,
+      quizQuestions: {
+        orderBy: { position: 'asc' },
+        select: { question: true, options: true, correctIndex: true, explanation: true }
+      },
       scheduledAt: true,
       sourcePostId: true,
       updatedAt: true
@@ -197,6 +267,13 @@ blogRouter.get('/mine', async (context) => {
       tags: true,
       coverImageUrl: true,
       coverImageAlt: true,
+      learningOutcomes: true,
+      prerequisites: true,
+      difficulty: true,
+      references: true,
+      lastReviewedAt: true,
+      seriesId: true,
+      seriesOrder: true,
       published: true,
       publishedAt: true,
       scheduledAt: true,
@@ -261,6 +338,17 @@ blogRouter.get('/manage/:id', async (context) => {
       tags: true,
       coverImageUrl: true,
       coverImageAlt: true,
+      learningOutcomes: true,
+      prerequisites: true,
+      difficulty: true,
+      references: true,
+      lastReviewedAt: true,
+      seriesId: true,
+      seriesOrder: true,
+      quizQuestions: {
+        orderBy: { position: 'asc' },
+        select: { question: true, options: true, correctIndex: true, explanation: true }
+      },
       published: true,
       publishedAt: true,
       scheduledAt: true,
@@ -300,11 +388,23 @@ blogRouter.post('/:id/edit', async (context) => {
       tags: source.tags,
       coverImageUrl: source.coverImageUrl,
       coverImageAlt: source.coverImageAlt,
+      learningOutcomes: source.learningOutcomes,
+      prerequisites: source.prerequisites,
+      difficulty: source.difficulty,
+      references: source.references,
+      lastReviewedAt: source.lastReviewedAt,
+      seriesId: source.seriesId,
+      seriesOrder: source.seriesOrder,
       authorId: userId,
       sourcePostId: source.id
     },
     select: { id: true }
   });
+  const questions = await prisma.quizQuestion.findMany({
+    where: { postId: source.id },
+    orderBy: { position: 'asc' }
+  });
+  await replaceQuiz(prisma, draft.id, questions);
   return context.json({ draft }, 201);
 });
 
@@ -330,10 +430,22 @@ blogRouter.post('/:id/duplicate', async (context) => {
       tags: source.tags,
       coverImageUrl: source.coverImageUrl,
       coverImageAlt: source.coverImageAlt,
+      learningOutcomes: source.learningOutcomes,
+      prerequisites: source.prerequisites,
+      difficulty: source.difficulty,
+      references: source.references,
+      lastReviewedAt: source.lastReviewedAt,
+      seriesId: source.seriesId,
+      seriesOrder: source.seriesOrder,
       authorId: userId
     },
     select: { id: true }
   });
+  const questions = await prisma.quizQuestion.findMany({
+    where: { postId: source.id },
+    orderBy: { position: 'asc' }
+  });
+  await replaceQuiz(prisma, draft.id, questions);
   return context.json({ draft }, 201);
 });
 
@@ -437,7 +549,14 @@ blogRouter.post('/:id/revisions/:revisionId/restore', async (context) => {
       excerpt: revision.excerpt,
       tags: revision.tags,
       coverImageUrl: revision.coverImageUrl,
-      coverImageAlt: revision.coverImageAlt
+      coverImageAlt: revision.coverImageAlt,
+      learningOutcomes: revision.learningOutcomes,
+      prerequisites: revision.prerequisites,
+      difficulty: revision.difficulty,
+      references: revision.references,
+      lastReviewedAt: revision.lastReviewedAt,
+      seriesId: revision.seriesId,
+      seriesOrder: revision.seriesOrder
     }
   });
   return context.json({ id: story.id, restoredRevisionId: revision.id });
@@ -457,6 +576,7 @@ blogRouter.get('/bulk', async (context) => {
   const prisma = db(context.env.DATABASE_URL);
   await publishDueStories(prisma);
   const userId = context.get('userId');
+  const followingOnly = context.req.query('following') === 'true';
   const { page, limit, search, topic, savedOnly, sort } = parseStoryListOptions({
     page: context.req.query('page'),
     limit: context.req.query('limit'),
@@ -467,9 +587,27 @@ blogRouter.get('/bulk', async (context) => {
   });
 
   if (savedOnly && !userId) return context.json(unauthorized('Sign in to view your saved stories.'), 401);
+  if (followingOnly && !userId)
+    return context.json(unauthorized('Sign in to view stories from authors you follow.'), 401);
+
+  const [blocks, mutes] = userId
+    ? await Promise.all([
+        prisma.userBlock.findMany({
+          where: { OR: [{ blockerId: userId }, { blockedId: userId }] },
+          select: { blockerId: true, blockedId: true }
+        }),
+        prisma.userMute.findMany({ where: { muterId: userId }, select: { mutedId: true } })
+      ])
+    : [[], []];
+  const hiddenAuthorIds = [
+    ...blocks.map((item) => (item.blockerId === userId ? item.blockedId : item.blockerId)),
+    ...mutes.map((item) => item.mutedId)
+  ];
 
   const where: Prisma.PostWhereInput = {
     published: true,
+    ...(hiddenAuthorIds.length ? { authorId: { notIn: hiddenAuthorIds } } : {}),
+    ...(followingOnly && userId ? { author: { followers: { some: { followerId: userId } } } } : {}),
     ...(topic ? { tags: { has: topic } } : {}),
     ...(savedOnly && userId ? { bookmarks: { some: { userId } } } : {}),
     ...(search
@@ -502,9 +640,15 @@ blogRouter.get('/bulk', async (context) => {
         tags: true,
         coverImageUrl: true,
         coverImageAlt: true,
+        difficulty: true,
+        series: { select: { id: true, slug: true, title: true } },
         publishedAt: true,
         createdAt: true,
-        author: { select: { id: true, name: true } },
+        author: { select: { id: true, name: true, username: true, headline: true, avatarUrl: true } },
+        readingProgress: {
+          where: { userId: userId || '__anonymous__' },
+          select: { progress: true }
+        },
         bookmarks: { where: { userId: userId || '__anonymous__' }, select: { userId: true } },
         claps: { where: { userId: userId || '__anonymous__' }, select: { userId: true } },
         _count: { select: { claps: true } }
@@ -514,13 +658,14 @@ blogRouter.get('/bulk', async (context) => {
   ]);
 
   return context.json({
-    blogs: blogs.map(({ bookmarks, claps, _count, content, ...blog }) => ({
+    blogs: blogs.map(({ bookmarks, claps, _count, content, readingProgress, ...blog }) => ({
       ...blog,
       contentPreview: createMarkdownPreview(content),
       readingTime: calculateReadingTime(content),
       saved: bookmarks.length > 0,
       liked: claps.length > 0,
-      clapCount: _count.claps
+      clapCount: _count.claps,
+      readingProgress: readingProgress[0]?.progress || 0
     })),
     pagination: { page, limit, total, hasMore: page * limit < total }
   });
@@ -579,6 +724,15 @@ blogRouter.post('/author/:id/follow', async (context) => {
   if (followerId === followingId) return context.json({ error: 'You cannot follow yourself.' }, 400);
   const author = await prisma.user.findUnique({ where: { id: followingId }, select: { id: true } });
   if (!author) return context.json({ error: 'Author not found.' }, 404);
+  const blocked = await prisma.userBlock.findFirst({
+    where: {
+      OR: [
+        { blockerId: followerId, blockedId: followingId },
+        { blockerId: followingId, blockedId: followerId }
+      ]
+    }
+  });
+  if (blocked) return context.json({ error: 'This follow relationship is unavailable.' }, 403);
   if (body.followed)
     await prisma.follow.upsert({
       where: { followerId_followingId: { followerId, followingId } },
@@ -586,6 +740,15 @@ blogRouter.post('/author/:id/follow', async (context) => {
       update: {}
     });
   else await prisma.follow.deleteMany({ where: { followerId, followingId } });
+  if (body.followed)
+    await prisma.notification.create({
+      data: {
+        recipientId: followingId,
+        actorId: followerId,
+        type: 'follow',
+        message: 'A reader started following you.'
+      }
+    });
   const followerCount = await prisma.follow.count({ where: { followingId } });
   return context.json({ followed: body.followed, followerCount });
 });
@@ -609,12 +772,32 @@ blogRouter.get('/:identifier', async (context) => {
       tags: true,
       coverImageUrl: true,
       coverImageAlt: true,
+      learningOutcomes: true,
+      prerequisites: true,
+      difficulty: true,
+      references: true,
+      lastReviewedAt: true,
+      seriesId: true,
+      seriesOrder: true,
+      series: { select: { id: true, slug: true, title: true } },
+      quizQuestions: {
+        orderBy: { position: 'asc' },
+        select: { id: true, question: true, options: true, position: true }
+      },
+      readingProgress: {
+        where: { userId: userId || '__anonymous__' },
+        select: { progress: true }
+      },
       publishedAt: true,
       createdAt: true,
       author: {
         select: {
           id: true,
           name: true,
+          username: true,
+          headline: true,
+          bio: true,
+          avatarUrl: true,
           followers: { where: { followerId: userId || '__anonymous__' }, select: { followerId: true } },
           _count: { select: { followers: true } }
         }
@@ -625,13 +808,35 @@ blogRouter.get('/:identifier', async (context) => {
     }
   });
   if (!blog) return context.json({ error: 'Story not found.' }, 404);
-  const { bookmarks, claps, _count, author, ...story } = blog;
+  const { bookmarks, claps, _count, author, readingProgress, ...story } = blog;
+  const [seriesStories, relatedStories] = await Promise.all([
+    blog.seriesId
+      ? prisma.post.findMany({
+          where: { seriesId: blog.seriesId, published: true },
+          orderBy: [{ seriesOrder: 'asc' }, { publishedAt: 'asc' }],
+          select: { id: true, slug: true, title: true, seriesOrder: true }
+        })
+      : [],
+    prisma.post.findMany({
+      where: {
+        id: { not: blog.id },
+        published: true,
+        ...(blog.tags.length ? { tags: { hasSome: blog.tags } } : { authorId: blog.author.id })
+      },
+      orderBy: { publishedAt: 'desc' },
+      take: 3,
+      select: { id: true, slug: true, title: true, excerpt: true, coverImageUrl: true }
+    })
+  ]);
   return context.json({
     blog: {
       ...story,
       saved: bookmarks.length > 0,
       liked: claps.length > 0,
       clapCount: _count.claps,
+      readingProgress: readingProgress[0]?.progress || 0,
+      seriesStories,
+      relatedStories,
       author: {
         id: author.id,
         name: author.name,

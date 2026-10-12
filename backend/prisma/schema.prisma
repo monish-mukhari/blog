@@ -14,60 +14,251 @@ datasource db {
 }
 
 model User {
-  id        String       @id @default(uuid())
-  email     String       @unique
-  name      String?
-  password  String
-  posts     Post[]
-  media     MediaAsset[]
-  bookmarks Bookmark[]
-  claps     Clap[]
-  following Follow[]     @relation("Following")
-  followers Follow[]     @relation("Followers")
+  id               String            @id @default(uuid())
+  email            String            @unique
+  username         String?           @unique
+  name             String?
+  password         String
+  headline         String?
+  bio              String?
+  avatarUrl        String?
+  website          String?
+  location         String?
+  digestFrequency  String            @default("weekly")
+  lastDigestAt     DateTime?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  posts            Post[]
+  series           Series[]
+  media            MediaAsset[]
+  bookmarks        Bookmark[]
+  claps            Clap[]
+  readingProgress  ReadingProgress[]
+  readerNotes      ReaderNote[]
+  quizAttempts     QuizAttempt[]
+  comments         Comment[]
+  notifications    Notification[]    @relation("NotificationRecipient")
+  notificationActs Notification[]    @relation("NotificationActor")
+  reports          ContentReport[]   @relation("ReportCreator")
+  reportsReceived  ContentReport[]   @relation("ReportedUser")
+  blocking         UserBlock[]       @relation("Blocker")
+  blockedBy        UserBlock[]       @relation("Blocked")
+  muting           UserMute[]        @relation("Muter")
+  mutedBy          UserMute[]        @relation("Muted")
+  following        Follow[]          @relation("Following")
+  followers        Follow[]          @relation("Followers")
 }
 
 model Post {
-  id            String         @id @default(uuid())
-  slug          String         @unique
-  title         String
-  content       String
-  contentFormat String         @default("markdown")
-  published     Boolean        @default(false)
-  excerpt       String?
-  tags          String[]       @default([])
-  coverImageUrl String?
-  coverImageAlt String?
-  clapCount     Int            @default(0)
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  publishedAt   DateTime?
-  scheduledAt   DateTime?
-  author        User           @relation(fields: [authorId], references: [id])
-  authorId      String
-  sourcePost    Post?          @relation("PostEditDraft", fields: [sourcePostId], references: [id], onDelete: Cascade)
-  sourcePostId  String?        @unique
-  editDraft     Post?          @relation("PostEditDraft")
-  revisions     PostRevision[]
-  bookmarks     Bookmark[]
-  claps         Clap[]
+  id               String            @id @default(uuid())
+  slug             String            @unique
+  title            String
+  content          String
+  contentFormat    String            @default("markdown")
+  published        Boolean           @default(false)
+  excerpt          String?
+  tags             String[]          @default([])
+  coverImageUrl    String?
+  coverImageAlt    String?
+  learningOutcomes String[]          @default([])
+  prerequisites    String[]          @default([])
+  difficulty       String?
+  references       String[]          @default([])
+  lastReviewedAt   DateTime?
+  series           Series?           @relation(fields: [seriesId], references: [id], onDelete: SetNull)
+  seriesId         String?
+  seriesOrder      Int?
+  clapCount        Int               @default(0)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  publishedAt      DateTime?
+  scheduledAt      DateTime?
+  author           User              @relation(fields: [authorId], references: [id])
+  authorId         String
+  sourcePost       Post?             @relation("PostEditDraft", fields: [sourcePostId], references: [id], onDelete: Cascade)
+  sourcePostId     String?           @unique
+  editDraft        Post?             @relation("PostEditDraft")
+  revisions        PostRevision[]
+  bookmarks        Bookmark[]
+  claps            Clap[]
+  readingProgress  ReadingProgress[]
+  readerNotes      ReaderNote[]
+  quizQuestions    QuizQuestion[]
+  comments         Comment[]
+  notifications    Notification[]
+  reports          ContentReport[]
 
   @@index([published, createdAt])
   @@index([published, scheduledAt])
   @@index([authorId, updatedAt])
+  @@index([seriesId, seriesOrder])
+}
+
+model Series {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  slug        String   @unique
+  owner       User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  ownerId     String
+  posts       Post[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([ownerId, updatedAt])
+}
+
+model ReadingProgress {
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  post        Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId      String
+  progress    Float     @default(0)
+  completedAt DateTime?
+  updatedAt   DateTime  @updatedAt
+
+  @@id([userId, postId])
+  @@index([userId, updatedAt])
+}
+
+model ReaderNote {
+  id        String   @id @default(uuid())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId    String
+  quote     String?
+  note      String
+  color     String   @default("yellow")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, postId, createdAt])
+}
+
+model QuizQuestion {
+  id           String        @id @default(uuid())
+  post         Post          @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId       String
+  question     String
+  options      String[]
+  correctIndex Int
+  explanation  String?
+  position     Int
+  attempts     QuizAttempt[]
+
+  @@index([postId, position])
+}
+
+model QuizAttempt {
+  id         String       @id @default(uuid())
+  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     String
+  question   QuizQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  questionId String
+  answer     Int
+  correct    Boolean
+  createdAt  DateTime     @default(now())
+
+  @@index([userId, questionId, createdAt])
+}
+
+model Comment {
+  id            String          @id @default(uuid())
+  body          String
+  status        String          @default("visible")
+  author        User            @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  authorId      String
+  post          Post            @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId        String
+  parent        Comment?        @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  parentId      String?
+  replies       Comment[]       @relation("CommentReplies")
+  reports       ContentReport[]
+  notifications Notification[]
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  @@index([postId, createdAt])
+  @@index([parentId, createdAt])
+}
+
+model Notification {
+  id          String    @id @default(uuid())
+  recipient   User      @relation("NotificationRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  recipientId String
+  actor       User?     @relation("NotificationActor", fields: [actorId], references: [id], onDelete: SetNull)
+  actorId     String?
+  type        String
+  message     String
+  post        Post?     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId      String?
+  comment     Comment?  @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  commentId   String?
+  readAt      DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([recipientId, readAt, createdAt])
+}
+
+model UserBlock {
+  blocker   User     @relation("Blocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blockerId String
+  blocked   User     @relation("Blocked", fields: [blockedId], references: [id], onDelete: Cascade)
+  blockedId String
+  createdAt DateTime @default(now())
+
+  @@id([blockerId, blockedId])
+}
+
+model UserMute {
+  muter     User     @relation("Muter", fields: [muterId], references: [id], onDelete: Cascade)
+  muterId   String
+  muted     User     @relation("Muted", fields: [mutedId], references: [id], onDelete: Cascade)
+  mutedId   String
+  createdAt DateTime @default(now())
+
+  @@id([muterId, mutedId])
+}
+
+model ContentReport {
+  id             String   @id @default(uuid())
+  reporter       User     @relation("ReportCreator", fields: [reporterId], references: [id], onDelete: Cascade)
+  reporterId     String
+  reportedUser   User?    @relation("ReportedUser", fields: [reportedUserId], references: [id], onDelete: SetNull)
+  reportedUserId String?
+  post           Post?    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId         String?
+  comment        Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  commentId      String?
+  reason         String
+  details        String?
+  status         String   @default("open")
+  createdAt      DateTime @default(now())
+
+  @@index([status, createdAt])
+  @@index([reporterId, createdAt])
 }
 
 model PostRevision {
-  id            String   @id @default(uuid())
-  post          Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
-  postId        String
-  title         String
-  content       String
-  contentFormat String
-  excerpt       String?
-  tags          String[]
-  coverImageUrl String?
-  coverImageAlt String?
-  createdAt     DateTime @default(now())
+  id               String    @id @default(uuid())
+  post             Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId           String
+  title            String
+  content          String
+  contentFormat    String
+  excerpt          String?
+  tags             String[]
+  coverImageUrl    String?
+  coverImageAlt    String?
+  learningOutcomes String[]  @default([])
+  prerequisites    String[]  @default([])
+  difficulty       String?
+  references       String[]  @default([])
+  lastReviewedAt   DateTime?
+  seriesId         String?
+  seriesOrder      Int?
+  createdAt        DateTime  @default(now())
 
   @@index([postId, createdAt])
 }
@@ -92,6 +283,7 @@ model Bookmark {
   post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
   postId    String
   createdAt DateTime @default(now())
+
   @@id([userId, postId])
 }
 
@@ -101,6 +293,7 @@ model Clap {
   post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
   postId    String
   createdAt DateTime @default(now())
+
   @@id([userId, postId])
 }
 
@@ -110,5 +303,6 @@ model Follow {
   following   User     @relation("Followers", fields: [followingId], references: [id], onDelete: Cascade)
   followingId String
   createdAt   DateTime @default(now())
+
   @@id([followerId, followingId])
 }

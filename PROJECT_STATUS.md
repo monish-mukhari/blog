@@ -5,7 +5,7 @@ This document is the durable source of truth for implementation progress, archit
 ## Snapshot
 
 - Last updated: 2026-10-11
-- Current stage: roadmap Phases 0–2 implemented and locally verified; production deployment verification pending
+- Current stage: roadmap Phases 0–4 implemented and locally verified; production deployment verification pending
 - Latest feature commit: `7e3a112 feat: add public discovery, drafts, story slugs, and SEO`
 - Working stack: React, Vite, TypeScript, Hono, Cloudflare Workers, Prisma, Neon PostgreSQL, and Vercel
 
@@ -29,8 +29,8 @@ This document is the durable source of truth for implementation progress, archit
 | Phase 0 — Product and technical foundation    | Complete        | Repeatable migrations, environment configuration, restricted CORS, structured errors/logging, optional monitoring delivery, automated tests, and CI are implemented.                                                                                                                                            |
 | Phase 1 — Public reading, discovery, and SEO  | Complete in code | Public discovery, sorting, compact feeds, canonical edge rendering, metadata, JSON-LD, social images, sitemap, RSS, and crawler controls are implemented. Production deployment and Search Console indexing verification remain operational steps.                                                                |
 | Phase 2 — Complete publishing workflow        | Complete        | Structured Markdown, previews, cross-device drafts, safe published edits, unpublishing, deletion, duplication, scheduling, revisions, processed media, captions, alt text, and unload protection are implemented.                                                                                                |
-| Phase 3 — Learning-focused reading            | Not started     | No table of contents, progress tracking, learning metadata, series, recommendations, private notes, or quizzes yet.                                                                                                                                                                                               |
-| Phase 4 — Profiles and healthy community      | Early partial   | Follow/unfollow exists, but profiles, following feed, comments, notifications, moderation, reporting, muting, and blocking do not.                                                                                                                                                                                |
+| Phase 3 — Learning-focused reading            | Complete        | Generated tables of contents, reading progress, resumption, learning metadata, ordered series, recommendations, private notes/highlights, references, and knowledge checks are implemented.                                                                                                                        |
+| Phase 4 — Profiles and healthy community      | Complete        | Editable profiles, author archives, a following feed, threaded discussions, mentions, author moderation, notifications, configurable digest delivery, reporting, muting, and blocking are implemented.                                                                                                            |
 | Phase 5 — Trust, security, and administration | Not started     | PBKDF2 password hashing and protected routes exist, but verification, reset, safer sessions, revocation, rate limits, roles, moderation, legal flows, deletion, and export remain.                                                                                                                                |
 | Phase 6 — Scale, quality, and growth          | Early partial   | Database indexes and Prisma Accelerate exist. Accessibility automation, end-to-end tests, analytics, backups, subscriptions, import/export, and multilingual support remain.                                                                                                                                      |
 
@@ -92,25 +92,26 @@ Legend: ✅ complete · 🟡 partially complete · ⬜ not started
 
 #### Phase 3 — Learning-focused reading
 
-- ⬜ Generated table of contents
-- ⬜ Reading progress and continue-reading state
-- ⬜ Learning outcomes, prerequisites, difficulty, references, and last-reviewed date
-- ⬜ Ordered learning series
-- ⬜ Related stories and prerequisite/next-step recommendations
-- ⬜ Private highlights and notes
-- ⬜ End-of-article questions or quizzes
+- ✅ Generated table of contents from second- and third-level Markdown headings
+- ✅ Reading progress, visible progress bars, automatic resumption, and a continue-reading library
+- ✅ Learning outcomes, prerequisites, difficulty, references, and last-reviewed date
+- ✅ Author-created ordered learning series with story navigation
+- ✅ Tag-aware related stories and series-based previous/next learning paths
+- ✅ Private captured quotations, highlights, and notes
+- ✅ End-of-article knowledge checks with saved attempts and explanations
 
-**Success criterion:** not started.
+**Success criterion:** met. Stories can now guide a learner through a topic and retain private learning state across devices.
 
 #### Phase 4 — Profiles and healthy community
 
-- ⬜ Editable public author profiles and author archives
-- 🟡 Follow/unfollow is implemented, but there is no dedicated following feed.
-- ⬜ Threaded comments, replies, mentions, and author moderation
-- ⬜ In-app notifications and configurable email digests
-- ⬜ Report, mute, and block functionality
+- ✅ Editable public author profiles, profile images, biography fields, and published-story archives
+- ✅ Follow/unfollow powers a dedicated following feed
+- ✅ Threaded comments, replies, `@username` mentions, and story-author moderation
+- ✅ In-app notifications with unread state and configurable off/daily/weekly email digests
+- ✅ Optional authenticated digest-delivery webhook for integration with an email provider
+- ✅ Report, mute, and block functionality with blocked relationships removed from follows and feeds
 
-**Success criterion:** not met. A basic follow relationship exists, but the community system has not been built.
+**Success criterion:** met. Authors can establish public identity and readers can discuss stories with privacy and safety controls.
 
 #### Phase 5 — Trust, security, and administration
 
@@ -140,13 +141,13 @@ Legend: ✅ complete · 🟡 partially complete · ⬜ not started
 
 ### Exact next starting point
 
-Phases 0–2 are complete in the codebase and passed local integration smoke testing. The next work is a **deployment closure**, followed by roadmap Phase 3:
+Phases 0–4 are complete in the codebase and passed local integration smoke testing. The next work is a **deployment closure**, followed by roadmap Phase 5:
 
 1. Deploy the updated Worker, including its cron trigger and monitoring variables.
 2. Deploy the Vercel frontend and verify the canonical story rewrite.
 3. Complete and record the production smoke-test checklist.
 4. Submit the production sitemap in Google Search Console and monitor indexing.
-5. Begin Phase 3 with semantic headings and generated tables of contents, then add reading progress and learning metadata.
+5. Begin Phase 5 with email verification, password reset, and safer revocable cookie-based sessions.
 
 ## Implemented capabilities
 
@@ -180,6 +181,21 @@ Phases 0–2 are complete in the codebase and passed local integration smoke tes
 - Protected author routes
 - Bookmarks, appreciations, and author following
 - Native sharing with clipboard fallback
+- Editable public profiles and author story archives
+- Dedicated following feed
+- Threaded discussions, replies, mentions, and author moderation
+- In-app notifications and configurable email digest delivery
+- Report, mute, and block safety controls
+
+### Learning experience
+
+- Generated article table of contents
+- Cross-device reading progress and automatic resumption
+- Continue-reading library and card progress indicators
+- Learning outcomes, prerequisites, difficulty, references, and review dates
+- Ordered author-created series and related-story recommendations
+- Private captured highlights and notes
+- End-of-story knowledge checks with answer explanations
 
 ### Engineering quality
 
@@ -254,7 +270,7 @@ Vercel rewrites both public paths to the Worker, so crawlers and feed readers ca
 
 ## Production smoke-test checklist
 
-The equivalent local integration run passed on 2026-10-11: health, signup, media upload, draft synchronization, scheduling and cancellation, publishing, canonical edge rendering, safe published editing, revision restore, duplication, unpublishing, republishing, sitemap, RSS, and cleanup all succeeded against the Neon database.
+The equivalent local integration runs passed on 2026-10-11. Phase 0–2 checks covered health, signup, media, drafts, scheduling, publishing, canonical rendering, revisions, duplication, sitemap, RSS, and cleanup. The Phase 3–4 smoke suite then passed 16 learning/community checks covering profiles, series, learning metadata, quizzes, following feeds, progress, private notes, threaded discussion, notifications, archives, reports, muting, blocking, and cleanup against Neon.
 
 - [ ] Worker `/health` returns HTTP 200.
 - [ ] Signup and sign-in work on the deployed frontend.
@@ -272,10 +288,10 @@ The equivalent local integration run passed on 2026-10-11: health, signup, media
 
 1. Deploy the Worker and frontend, then complete and record the production smoke tests.
 2. Submit the sitemap to Google Search Console and monitor indexing.
-3. Start Phase 3 with generated tables of contents and reading-progress persistence.
-4. Add learning outcomes, prerequisites, difficulty, references, and reviewed dates.
-5. Add ordered series and related/prerequisite/next-step recommendations.
-6. Add automated frontend accessibility and end-to-end coverage alongside Phase 3.
+3. Start Phase 5 with email verification and password-reset flows.
+4. Replace browser-stored bearer tokens with safer revocable cookie sessions.
+5. Add rate limits, bot protection, roles, editorial moderation, audit logs, and legal/data-rights flows.
+6. Add automated accessibility and browser end-to-end coverage alongside Phase 5.
 
 ## Maintenance rules
 

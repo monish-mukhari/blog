@@ -27,7 +27,14 @@ userRouter.post('/signup', async (context) => {
     stage = 'password_hash';
     const password = await hashPassword(parsed.data.password);
     stage = 'account_create';
-    const user = await prisma.user.create({ data: { email, name, password } });
+    const id = crypto.randomUUID();
+    const usernameBase =
+      (name || email.split('@')[0] || 'writer')
+        .toLowerCase()
+        .replace(/[^a-z0-9_]/g, '')
+        .slice(0, 21) || 'writer';
+    const username = `${usernameBase}_${id.replace(/-/g, '').slice(0, 8)}`;
+    const user = await prisma.user.create({ data: { id, email, username, name, password } });
     stage = 'token_create';
     return context.text(await createToken(user.id, context.env.JWT_SECRET));
   } catch (error) {

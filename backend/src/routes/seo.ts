@@ -82,9 +82,12 @@ const storySelection = {
   contentFormat: true,
   coverImageUrl: true,
   coverImageAlt: true,
+  learningOutcomes: true,
+  prerequisites: true,
+  difficulty: true,
   publishedAt: true,
   updatedAt: true,
-  author: { select: { name: true } }
+  author: { select: { name: true, username: true } }
 } as const;
 
 const storyDocument = (
@@ -96,9 +99,12 @@ const storyDocument = (
     contentFormat: string;
     coverImageUrl: string | null;
     coverImageAlt: string | null;
+    learningOutcomes: string[];
+    prerequisites: string[];
+    difficulty: string | null;
     publishedAt: Date | null;
     updatedAt: Date;
-    author: { name: string | null };
+    author: { name: string | null; username: string | null };
   },
   origin: string,
   redirect: boolean
@@ -109,13 +115,21 @@ const storyDocument = (
   const author = post.author.name || 'Anonymous';
   const structuredData = JSON.stringify({
     '@context': 'https://schema.org',
-    '@type': 'Article',
+    '@type': ['Article', 'LearningResource'],
     headline: post.title,
     description,
     image: [image],
     datePublished: post.publishedAt?.toISOString(),
     dateModified: post.updatedAt.toISOString(),
-    author: { '@type': 'Person', name: author },
+    author: {
+      '@type': 'Person',
+      name: author,
+      ...(post.author.username ? { url: `${origin}/author/${post.author.username}` } : {})
+    },
+    learningResourceType: 'Article',
+    educationalLevel: post.difficulty || undefined,
+    teaches: post.learningOutcomes.length ? post.learningOutcomes : undefined,
+    educationalUse: post.prerequisites.length ? 'Self study with prerequisites' : 'Self study',
     mainEntityOfPage: canonical
   }).replace(/</g, '\\u003c');
   const content =

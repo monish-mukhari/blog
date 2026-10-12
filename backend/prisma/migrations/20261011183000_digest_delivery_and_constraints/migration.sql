@@ -1,0 +1,7 @@
+ALTER TABLE "Post" ALTER COLUMN "learningOutcomes" SET NOT NULL;
+ALTER TABLE "Post" ALTER COLUMN "prerequisites" SET NOT NULL;
+ALTER TABLE "Post" ALTER COLUMN "references" SET NOT NULL;
+ALTER TABLE "PostRevision" ALTER COLUMN "learningOutcomes" SET NOT NULL;
+ALTER TABLE "PostRevision" ALTER COLUMN "prerequisites" SET NOT NULL;
+ALTER TABLE "PostRevision" ALTER COLUMN "references" SET NOT NULL;
+ALTER TABLE "User" ADD COLUMN "lastDigestAt" TIMESTAMP(3);

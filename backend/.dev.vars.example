@@ -4,3 +4,5 @@ FRONTEND_URL=http://localhost:5173
 # Optional HTTPS endpoint for production error events.
 ERROR_MONITOR_URL=
 ERROR_MONITOR_TOKEN=
+DIGEST_WEBHOOK_URL=
+DIGEST_WEBHOOK_TOKEN=
