@@ -254,8 +254,8 @@ export const FullBlog = ({ blog }: { blog: Blog }) => {
             <ReaderNotes postId={blog.id} />
             <StoryQuiz questions={blog.quizQuestions} />
           </article>
-          <aside className="order-3">
-            <div className="sticky top-28 rounded-[18px] border border-[var(--line)] bg-[var(--surface)] p-5">
+          <aside className="order-3 md:sticky md:top-28 md:self-start">
+            <div className="rounded-[18px] border border-[var(--line)] bg-[var(--surface)] p-5">
               <p className="text-xs font-bold uppercase tracking-[.14em] text-[var(--muted)]">Written by</p>
               <div className="mt-4 flex items-center gap-3">
                 <Avatar size="big" name={blog.author.name || 'Anonymous'} />
