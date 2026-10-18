@@ -174,7 +174,8 @@ export const FullBlog = ({ blog }: { blog: Blog }) => {
     }
   };
   const share = async () => {
-    const shareUrl = `${window.location.origin}${storyPath}`;
+    const sharePath = blog.slug ? `/share/${blog.slug}` : storyPath;
+    const shareUrl = `${window.location.origin}${sharePath}`;
     try {
       if (navigator.share) await navigator.share({ title: blog.title, url: shareUrl });
       else {

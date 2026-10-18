@@ -60,7 +60,7 @@ flowchart TD
     A["1. Give every story a readable URL"] --> B["2. Describe it with metadata"]
     B --> C["3. Declare one canonical URL"]
     C --> D["4. List it in the sitemap and RSS"]
-    D --> E["5. Edge-render canonical pages for crawlers"]
+    D --> E["5. Render dedicated share previews for social crawlers"]
     E --> F["6. Keep drafts and author screens out of public discovery"]
 ```
 
@@ -104,13 +104,13 @@ flowchart TB
     end
 
     subgraph SocialFlow["A social service creates a preview"]
-        S1["Request /story/my-title-abc123"] --> S2["Vercel rewrites to Worker-rendered HTML"]
+        S1["Request /share/my-title-abc123"] --> S2["Vercel rewrites to Worker-rendered HTML"]
         S2 --> S3["Service creates title and description preview"]
         S2 --> S4["Human is sent to canonical story page"]
     end
 ```
 
-This is a hybrid solution: in-app navigation uses the interactive React reader, while direct canonical story requests, the sitemap, RSS feed, and share metadata are rendered by the Worker.
+This is a hybrid solution: canonical story navigation and refreshes use the interactive React reader, while the Worker renders the sitemap, RSS feed, and dedicated share-preview metadata.
 
 ## 3. URLs, slugs, and canonical URLs
 
@@ -327,7 +327,7 @@ This works well for readers. Google and some other search engines can render Jav
 
 **Prerendering** means generating complete HTML ahead of time or on demand so crawlers do not need to run the application.
 
-Inkwell now edge-renders direct canonical `/story/<slug>` requests. `frontend/vercel.json` rewrites those requests to the Worker's `/render/<slug>` endpoint, which returns the complete article, metadata, JSON-LD, and preview image in the first HTML response. Navigation inside the already-loaded React application remains client-rendered and interactive.
+Inkwell keeps direct canonical `/story/<slug>` requests in the React application. This lets a refreshed page read the browser's persisted authentication token and request personalized story state. The Worker still server-renders `/share/<slug>` for clients such as social crawlers that do not execute JavaScript.
 
 ## 6. Open Graph and social previews
 
@@ -344,24 +344,24 @@ Inkwell sets:
 
 Inkwell provides both `og:image` and `twitter:image`. A story's processed cover image is preferred; stories without a cover use `frontend/public/og-default.png`, a generated editorial fallback bitmap.
 
-## 7. Canonical sharing and the legacy `/share/:slug` fallback
+## 7. Canonical sharing through `/share/:slug`
 
-The Share button in `frontend/src/components/FullBlog.tsx` now shares the canonical Vercel URL directly:
+The Share button in `frontend/src/components/FullBlog.tsx` shares a preview URL on the frontend domain:
 
 ```text
-<Frontend origin>/story/<slug>
+<Frontend origin>/share/<slug>
 ```
 
-Vercel rewrites a direct crawler request to the Worker's edge renderer. The older `/share/<slug>` endpoint remains compatible with previously shared links. Both handlers:
+Vercel rewrites this path to the Worker's share renderer, which:
 
 1. Looks up the story by slug.
 2. Requires `published: true`, so drafts cannot be exposed.
 3. Builds a title and description.
 4. Calculates the canonical Vercel story URL using `FRONTEND_URL`.
 5. Returns complete HTML containing standard metadata, Open Graph metadata, Twitter card metadata, and JSON-LD.
-6. For the legacy share endpoint only, includes a zero-second meta refresh that sends a human visitor to the canonical story page.
+6. Includes a zero-second meta refresh that sends a human visitor to the canonical story page.
 
-This gives a social crawler useful HTML immediately at the canonical address. Previously shared Worker URLs still land readers on the canonical frontend.
+This gives a social crawler useful HTML immediately while human readers land on the interactive canonical frontend.
 
 ```mermaid
 sequenceDiagram
@@ -372,8 +372,8 @@ sequenceDiagram
     participant DB as PostgreSQL
     participant Story as Canonical Vercel story
     User->>App: Press Share
-    App-->>User: Provide canonical /story/slug URL
-    Social->>Worker: Vercel rewrites /story/slug to Worker
+    App-->>User: Provide /share/slug preview URL
+    Social->>Worker: Vercel rewrites /share/slug to Worker
     Worker->>DB: Find published story
     DB-->>Worker: Title, excerpt, author, date
     Worker-->>Social: Complete HTML metadata and JSON-LD
@@ -405,7 +405,7 @@ The `escapeXml` helper in `backend/src/routes/seo.ts` replaces these characters 
 
 **Schema.org** is the shared vocabulary used by our implementation. **JSON-LD** is the JSON-based format used to place that data in HTML.
 
-The canonical edge-rendered story and legacy `/share/<slug>` page include an `Article` object similar to:
+The `/share/<slug>` page includes an `Article` object similar to:
 
 ```json
 {
@@ -432,7 +432,7 @@ The canonical edge-rendered story and legacy `/share/<slug>` page include an `Ar
 
 Structured data helps understanding and can make a page eligible for enhanced search presentation, but it does not guarantee a **rich result**. A rich result is a search result with additional presentation beyond a normal title, URL, and snippet.
 
-JSON-LD is included directly in the first edge-rendered HTML response for canonical `/story/<slug>` requests and remains available on the legacy share page.
+JSON-LD is included directly in the first server-rendered HTML response from `/share/<slug>`. The React reader applies canonical metadata in the browser on `/story/<slug>`.
 
 ## 9. Sitemap
 
@@ -511,6 +511,7 @@ A **rewrite** serves content from another destination while keeping the public r
 ```text
 /sitemap.xml -> Cloudflare Worker /sitemap.xml
 /rss.xml     -> Cloudflare Worker /rss.xml
+/share/:slug -> Cloudflare Worker /share/:slug
 ```
 
 This allows the frontend domain to expose the sitemap and RSS feed even though the Worker generates them.
@@ -567,7 +568,7 @@ When an author publishes a valid story:
 - The public API can return the story by ID or slug.
 - The story appears in the dynamically generated sitemap.
 - It can appear in the RSS feed.
-- The canonical `/story/<slug>` edge renderer starts returning its social metadata and JSON-LD.
+- The `/share/<slug>` renderer starts returning its social metadata and JSON-LD.
 - The browser applies its dynamic title, description, and canonical URL.
 
 No one needs to manually edit the sitemap or RSS file for each article.
@@ -656,7 +657,7 @@ flowchart LR
         W2["Canonical URLs"]
         W3["Dynamic metadata in browser"]
         W4["Sitemap and RSS"]
-        W5["Edge-rendered canonical pages"]
+        W5["Server-rendered share previews"]
         W6["robots.txt"]
         W7["Social preview images"]
     end
@@ -675,7 +676,7 @@ flowchart LR
 2. **Validate production output.** Run canonical stories through rich-result and social-preview validators after deployment.
 3. **Improve robots directives.** Add a sitemap declaration and deliberate `noindex` handling for non-public screens.
 4. **Add SEO regression tests.** Test XML escaping, published-only behavior, canonical origins, metadata output, and malformed or missing stories.
-5. **Measure real performance.** Monitor Core Web Vitals and optimize the edge-rendered and interactive reading paths from production evidence.
+5. **Measure real performance.** Monitor Core Web Vitals and optimize the share-preview and interactive reading paths from production evidence.
 6. **Improve semantic learning structure.** Phase 3 tables of contents, learning metadata, internal links, and related content can strengthen reader and crawler understanding.
 
 ## 17. Glossary
@@ -693,12 +694,12 @@ flowchart LR
 | Canonical URL   | Preferred official address for content                                 | `/story/<slug>`                                 |
 | SPA             | App that changes routes inside one loaded HTML shell                   | The React frontend                              |
 | CSR             | Browser JavaScript constructs the page                                 | React rendering a fetched story                 |
-| SSR/edge render | Server returns already-rendered page HTML                              | Worker response for direct canonical stories    |
-| Prerendering    | Complete HTML is generated ahead of or during requests                 | Not required by the current edge-render design  |
+| SSR/edge render | Server returns already-rendered page HTML                              | Worker response for share previews              |
+| Prerendering    | Complete HTML is generated ahead of or during requests                 | Used on demand for the share-preview route      |
 | Open Graph      | Social link-preview metadata standard                                  | `og:title` and `og:description`                 |
 | Twitter Card    | Link-preview metadata associated with X/Twitter                        | `summary_large_image`                           |
 | Structured data | Explicit machine-readable description of content                       | The Schema.org Article object                   |
-| JSON-LD         | JSON format for structured data embedded in HTML                       | Script in canonical and legacy share HTML       |
+| JSON-LD         | JSON format for structured data embedded in HTML                       | Script in share-preview HTML                    |
 | Rich result     | Enhanced search presentation                                           | Eligibility can come from valid structured data |
 | Sitemap         | XML list of public URLs                                                | `/sitemap.xml`                                  |
 | RSS             | XML subscription feed for new content                                  | `/rss.xml`                                      |
@@ -717,15 +718,15 @@ flowchart LR
 | `backend/prisma/migrations/20261010120000_story_slugs_and_drafts/migration.sql` | Added slug and publication fields and indexes                           |
 | `backend/src/blog-utils.ts`                                                     | Produces readable, collision-resistant slugs                            |
 | `backend/src/routes/blog.ts`                                                    | Publishes stories, assigns slugs, and exposes published stories by slug |
-| `backend/src/routes/seo.ts`                                                     | Generates canonical article HTML, sitemap, RSS, metadata, and JSON-LD   |
+| `backend/src/routes/seo.ts`                                                     | Generates share-preview HTML, sitemap, RSS, metadata, and JSON-LD       |
 | `backend/src/index.ts`                                                          | Mounts SEO routes at the Worker root                                    |
 | `frontend/index.html`                                                           | Provides generic default metadata and RSS autodiscovery                 |
 | `frontend/src/App.tsx`                                                          | Maps `/story/:id` to the story screen; the parameter can contain a slug |
 | `frontend/src/components/BlogCard.tsx`                                          | Links story cards to slug URLs                                          |
-| `frontend/src/components/FullBlog.tsx`                                          | Applies story metadata and shares the canonical story URL               |
+| `frontend/src/components/FullBlog.tsx`                                          | Applies canonical metadata and shares the preview URL                    |
 | `frontend/src/lib/metadata.ts`                                                  | Creates, updates, and cleans up dynamic head metadata                   |
 | `frontend/public/robots.txt`                                                    | Gives crawler instructions for public and private paths                 |
-| `frontend/vercel.json`                                                          | Edge-renders canonical stories, proxies sitemap/RSS, and supports routes |
+| `frontend/vercel.json`                                                          | Proxies share previews, sitemap/RSS, and supports SPA routes             |
 | `backend/wrangler.toml`                                                         | Documents the required Worker environment configuration                 |
 
 ## 19. The concise mental model

@@ -79,7 +79,7 @@ The database-backed media implementation is deliberately self-contained. At larg
 
 ## Preview and rendering
 
-The editor preview uses the same React Markdown component as the public reader. Direct canonical `/story/:slug` requests are rewritten by Vercel to `/render/:slug` on the Worker, which returns complete article HTML, canonical metadata, Open Graph and Twitter fields, and JSON-LD. Client-side navigation retains the interactive React reader.
+The editor preview uses the same React Markdown component as the public reader. Canonical `/story/:slug` requests load the React reader on both navigation and refresh, preserving authenticated reading features. The Share action uses `/share/:slug`, which Vercel rewrites to the Worker for complete Open Graph, Twitter, and JSON-LD metadata before redirecting human visitors to the canonical story.
 
 ## Operational requirements
 

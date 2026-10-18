@@ -228,7 +228,7 @@ valid token.
 The list route accepts `page`, `limit` (maximum 24), `search`, `topic`, `saved=true`, and `sort=newest|oldest|popular` query parameters.
 The saved filter requires authentication.
 
-The Worker also serves `/sitemap.xml`, `/rss.xml`, `/render/:slug`, and crawler-friendly `/share/:slug` pages. Vercel rewrites direct canonical `/story/:slug` requests to the edge renderer, while React handles interactive in-app navigation. Existing `/blog/:id` links remain supported.
+The Worker also serves `/sitemap.xml`, `/rss.xml`, `/render/:slug`, and crawler-friendly `/share/:slug` pages. Canonical `/story/:slug` requests load the interactive React application, including after a refresh. The Share action uses `/share/:slug` so link-preview crawlers receive server-rendered metadata before human visitors are redirected to the canonical story. Existing `/blog/:id` links remain supported.
 
 ## Deploy the backend to Cloudflare Workers
 
@@ -269,7 +269,7 @@ Import the Git repository into Vercel and configure:
 | Build Command    | `npm run build` |
 | Output Directory | `dist`          |
 
-The included `frontend/vercel.json` edge-renders direct canonical story requests, proxies sitemap and RSS, and rewrites remaining client-side routes to the React application.
+The included `frontend/vercel.json` proxies share previews, sitemap, and RSS to the Worker and rewrites client-side routes to the React application.
 
 You can also deploy through the CLI:
 

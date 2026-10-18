@@ -66,8 +66,8 @@ Legend: ✅ complete · 🟡 partially complete · ⬜ not started
 - ✅ Browser metadata, Open Graph fields, and canonical tags are implemented.
 - ✅ Structured `Article` data is included in server-rendered canonical story HTML.
 - ✅ Dynamic sitemap, `robots.txt`, and RSS are implemented.
-- ✅ The Worker supplies crawler-friendly share HTML and canonical edge-rendered story HTML.
-- ✅ Direct canonical story requests are server-rendered through a Vercel-to-Worker rewrite.
+- ✅ The Worker supplies crawler-friendly share HTML with canonical story metadata.
+- ✅ Direct canonical story requests load the interactive React reader and retain authentication after refresh.
 - ✅ Story cover images and a generated fallback bitmap provide Open Graph and Twitter preview images.
 - 🟡 Search Console submission and confirmed indexing remain production operational tasks because search engines control indexing.
 
@@ -144,7 +144,7 @@ Legend: ✅ complete · 🟡 partially complete · ⬜ not started
 Phases 0–4 are complete in the codebase and passed local integration smoke testing. The next work is a **deployment closure**, followed by roadmap Phase 5:
 
 1. Deploy the updated Worker, including its cron trigger and monitoring variables.
-2. Deploy the Vercel frontend and verify the canonical story rewrite.
+2. Deploy the Vercel frontend and verify canonical story refreshes and the share-preview rewrite.
 3. Complete and record the production smoke-test checklist.
 4. Submit the production sitemap in Google Search Console and monitor indexing.
 5. Begin Phase 5 with email verification, password reset, and safer revocable cookie-based sessions.
@@ -246,7 +246,7 @@ Some social crawlers do not execute client-side React. The Worker therefore expo
 /share/<slug>
 ```
 
-This endpoint reads the published story from PostgreSQL and returns complete HTML containing story metadata, an `Article` JSON-LD object, and a canonical link. It then redirects human visitors to the canonical `/story/<slug>` page. New shares use the canonical story URL directly because Vercel rewrites direct requests to the Worker's edge renderer; `/share/<slug>` remains compatible with older links.
+This endpoint reads the published story from PostgreSQL and returns complete HTML containing story metadata, an `Article` JSON-LD object, and a canonical link. It then redirects human visitors to the canonical `/story/<slug>` page. The Share action uses this route so preview crawlers receive metadata without replacing the interactive canonical story on refresh.
 
 ### Sitemap and RSS
 
@@ -263,7 +263,7 @@ Vercel rewrites both public paths to the Worker, so crawlers and feed readers ca
 
 ### Current SEO limitations
 
-- Direct canonical story requests are edge-rendered, while in-app story navigation uses the interactive React reader.
+- Direct canonical story requests and in-app navigation both use the interactive React reader.
 - Search-engine verification, analytics, and production structured-data validation are not yet recorded.
 - The generated fallback social bitmap is shared by stories without an uploaded cover image.
 - Search engines ultimately decide whether and when a technically eligible story is indexed or ranked.

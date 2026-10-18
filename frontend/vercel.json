@@ -1,8 +1,8 @@
 {
   "rewrites": [
     {
-      "source": "/story/:slug",
-      "destination": "https://backend.manishmukherjee91.workers.dev/render/:slug"
+      "source": "/share/:slug",
+      "destination": "https://backend.manishmukherjee91.workers.dev/share/:slug"
     },
     {
       "source": "/sitemap.xml",
