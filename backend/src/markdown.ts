@@ -56,6 +56,7 @@ export const renderMarkdown = (markdown: string) => {
   let paragraph: string[] = [];
   let list: 'ul' | 'ol' | null = null;
   let code: string[] | null = null;
+  let codeLanguage = '';
 
   const flushParagraph = () => {
     if (!paragraph.length) return;
@@ -69,13 +70,20 @@ export const renderMarkdown = (markdown: string) => {
   };
 
   for (const line of lines) {
-    if (line.startsWith('```')) {
+    const codeFence = /^```\s*(.*)$/.exec(line);
+    if (codeFence) {
       flushParagraph();
       closeList();
       if (code) {
-        output.push(`<pre><code>${escapeHtml(code.join('\n'))}</code></pre>`);
+        const languageClass = codeLanguage ? ` class="language-${escapeHtml(codeLanguage)}"` : '';
+        output.push(`<pre><code${languageClass}>${escapeHtml(code.join('\n'))}</code></pre>`);
         code = null;
-      } else code = [];
+        codeLanguage = '';
+      } else {
+        code = [];
+        const fenceLanguage = codeFence[1].trim();
+        codeLanguage = /^[a-z0-9_+#.-]+$/i.test(fenceLanguage) ? fenceLanguage.toLowerCase() : '';
+      }
       continue;
     }
     if (code) {
@@ -119,7 +127,10 @@ export const renderMarkdown = (markdown: string) => {
     paragraph.push(line.trim());
   }
 
-  if (code) output.push(`<pre><code>${escapeHtml(code.join('\n'))}</code></pre>`);
+  if (code) {
+    const languageClass = codeLanguage ? ` class="language-${escapeHtml(codeLanguage)}"` : '';
+    output.push(`<pre><code${languageClass}>${escapeHtml(code.join('\n'))}</code></pre>`);
+  }
   flushParagraph();
   closeList();
   return output.join('');

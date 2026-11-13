@@ -27,4 +27,18 @@ describe('server Markdown rendering', () => {
   it('escapes generated metadata values', () => {
     assert.equal(escapeHtml('Ideas & <learning>'), 'Ideas &amp; &lt;learning&gt;');
   });
+
+  it('preserves safe fenced-code language metadata', () => {
+    const html = renderMarkdown('```tsx\nconst card = <ProductCard />;\n```');
+
+    assert.match(html, /<pre><code class="language-tsx">/);
+    assert.match(html, /const card = &lt;ProductCard \/&gt;;/);
+  });
+
+  it('does not place unsafe fence metadata in HTML attributes', () => {
+    const html = renderMarkdown('```js" onmouseover="alert(1)\nconst safe = true;\n```');
+
+    assert.doesNotMatch(html, /onmouseover/);
+    assert.doesNotMatch(html, /class=/);
+  });
 });

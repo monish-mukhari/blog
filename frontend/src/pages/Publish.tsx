@@ -491,7 +491,10 @@ export const Publish = () => {
                 />
                 <Tool label="Quote" onClick={() => editSelection('> ', '', 'Quoted text')} />
                 <Tool label="List" onClick={() => editSelection('- ', '', 'List item')} />
-                <Tool label="Code" onClick={() => editSelection('```\n', '\n```', 'code')} />
+                <Tool
+                  label="Code block"
+                  onClick={() => editSelection('```javascript\n', '\n```', 'const example = true;')}
+                />
               </div>
               <label className="sr-only" htmlFor="story-body">
                 Story content in Markdown
@@ -505,7 +508,7 @@ export const Publish = () => {
                 rows={20}
                 className="min-h-[560px] w-full resize-y bg-transparent font-mono text-base leading-7 outline-none"
                 placeholder={
-                  'Start writing in Markdown…\n\n## Add a heading\n\nUse **bold**, *italic*, lists, links, quotes, and code.'
+                  'Start writing in Markdown…\n\n## Add a heading\n\nUse **bold**, *italic*, lists, links, quotes, and language-tagged code blocks.'
                 }
               />
             </section>

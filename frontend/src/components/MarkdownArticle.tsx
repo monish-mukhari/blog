@@ -1,6 +1,8 @@
+import { Children, isValidElement, type ReactNode } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { headingId } from '../lib/learning';
+import { CodeBlock } from './CodeBlock';
 
 const nodeText = (value: unknown): string => {
   if (typeof value === 'string' || typeof value === 'number') return String(value);
@@ -10,11 +12,26 @@ const nodeText = (value: unknown): string => {
   return '';
 };
 
+type MarkdownCodeElement = {
+  children?: ReactNode;
+  className?: string;
+};
+
+const MarkdownPre = ({ children }: { children?: ReactNode }) => {
+  const codeElement = Children.toArray(children).find((child) => isValidElement<MarkdownCodeElement>(child));
+  if (!isValidElement<MarkdownCodeElement>(codeElement)) return <pre>{children}</pre>;
+
+  const language = /(?:^|\s)language-([^\s]+)/.exec(codeElement.props.className || '')?.[1] || '';
+  const code = nodeText(codeElement.props.children).replace(/\n$/, '');
+  return <CodeBlock code={code} language={language} />;
+};
+
 export const MarkdownArticle = ({ content }: { content: string }) => (
   <div className="article-body markdown-article">
     <ReactMarkdown
       remarkPlugins={[remarkGfm]}
       components={{
+        pre: MarkdownPre,
         h2: ({ children, ...props }) => (
           <h2 {...props} id={headingId(nodeText(children))} className="scroll-mt-28">
             {children}
