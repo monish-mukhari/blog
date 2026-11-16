@@ -88,11 +88,11 @@ export const profileInput = z.object({
     .toLowerCase()
     .regex(/^[a-z0-9_]{3,30}$/),
   name: z.string().trim().min(1).max(80),
-  headline: z.string().trim().max(120).optional(),
-  bio: z.string().trim().max(500).optional(),
-  avatarUrl: z.string().url().max(2000).optional().or(z.literal('')),
-  website: z.string().url().max(2000).optional().or(z.literal('')),
-  location: z.string().trim().max(100).optional(),
+  headline: z.preprocess((value) => value ?? '', z.string().trim().max(120)),
+  bio: z.preprocess((value) => value ?? '', z.string().trim().max(500)),
+  avatarUrl: z.preprocess((value) => value ?? '', z.string().url().max(2000).or(z.literal(''))),
+  website: z.preprocess((value) => value ?? '', z.string().url().max(2000).or(z.literal(''))),
+  location: z.preprocess((value) => value ?? '', z.string().trim().max(100)),
   digestFrequency: z.enum(['off', 'daily', 'weekly'])
 });
 

@@ -18,6 +18,19 @@ const initial = {
   digestFrequency: 'weekly'
 };
 
+const normalizeProfile = (profile: Record<string, string | null | undefined> = {}) => ({
+  username: profile.username ?? '',
+  name: profile.name ?? '',
+  headline: profile.headline ?? '',
+  bio: profile.bio ?? '',
+  avatarUrl: profile.avatarUrl ?? '',
+  website: profile.website ?? '',
+  location: profile.location ?? '',
+  digestFrequency: ['off', 'daily', 'weekly'].includes(profile.digestFrequency || '')
+    ? profile.digestFrequency!
+    : initial.digestFrequency
+});
+
 export const ProfileSettings = () => {
   const navigate = useNavigate();
   const [form, setForm] = useState(initial);
@@ -26,7 +39,7 @@ export const ProfileSettings = () => {
     axios
       .get(`${BACKEND_URL}/api/v1/community/profile/me`, { headers: headers() })
       .then((response) => {
-        setForm({ ...initial, ...response.data.profile });
+        setForm(normalizeProfile(response.data.profile));
         setStatus('');
       })
       .catch(() => navigate('/signin'));
@@ -41,7 +54,7 @@ export const ProfileSettings = () => {
         headers: headers()
       });
       setStatus('Profile saved');
-      setForm((current) => ({ ...current, ...response.data.profile }));
+      setForm((current) => normalizeProfile({ ...current, ...response.data.profile }));
     } catch (error) {
       setStatus(
         axios.isAxiosError(error)
