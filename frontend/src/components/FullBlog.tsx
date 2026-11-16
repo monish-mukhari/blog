@@ -206,7 +206,7 @@ export const FullBlog = ({ blog }: { blog: Blog }) => {
             <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-[var(--muted)]">{blog.excerpt}</p>
           )}
           <div className="mt-8 flex items-center justify-center gap-3">
-            <Avatar size="big" name={blog.author.name || 'Anonymous'} />
+            <Avatar size="big" name={blog.author.name || 'Anonymous'} avatarUrl={blog.author.avatarUrl} />
             <div className="text-left text-sm">
               <Link
                 to={`/author/${blog.author.username || blog.author.id}`}
@@ -259,7 +259,7 @@ export const FullBlog = ({ blog }: { blog: Blog }) => {
             <div className="rounded-[18px] border border-[var(--line)] bg-[var(--surface)] p-5">
               <p className="text-xs font-bold uppercase tracking-[.14em] text-[var(--muted)]">Written by</p>
               <div className="mt-4 flex items-center gap-3">
-                <Avatar size="big" name={blog.author.name || 'Anonymous'} />
+                <Avatar size="big" name={blog.author.name || 'Anonymous'} avatarUrl={blog.author.avatarUrl} />
                 <div>
                   <Link
                     to={`/author/${blog.author.username || blog.author.id}`}

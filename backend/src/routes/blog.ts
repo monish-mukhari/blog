@@ -840,6 +840,10 @@ blogRouter.get('/:identifier', async (context) => {
       author: {
         id: author.id,
         name: author.name,
+        username: author.username,
+        headline: author.headline,
+        bio: author.bio,
+        avatarUrl: author.avatarUrl,
         followed: author.followers.length > 0,
         followerCount: author._count.followers
       }

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Blog } from '../hooks';
@@ -47,14 +47,37 @@ const CardArt = ({ blog, large = false }: { blog: Blog; large?: boolean }) =>
   ) : (
     <StoryArt title={blog.title} large={large} />
   );
-export const Avatar = ({ name, size = 'small' }: { name: string; size?: 'small' | 'big' }) => (
-  <div
-    className={`inline-grid shrink-0 place-items-center rounded-full bg-[#10213d] font-semibold text-white ${size === 'small' ? 'h-7 w-7 text-[10px]' : 'h-11 w-11 text-sm'}`}
-    aria-label={name}
-  >
-    {initials(name)}
-  </div>
-);
+export const Avatar = ({
+  name,
+  avatarUrl,
+  size = 'small'
+}: {
+  name: string;
+  avatarUrl?: string;
+  size?: 'small' | 'big';
+}) => {
+  const [imageFailed, setImageFailed] = useState(false);
+  const sizeClass = size === 'small' ? 'h-7 w-7 text-[10px]' : 'h-11 w-11 text-sm';
+
+  useEffect(() => setImageFailed(false), [avatarUrl]);
+
+  return avatarUrl && !imageFailed ? (
+    <img
+      src={avatarUrl}
+      alt={`${name}'s profile`}
+      loading="lazy"
+      onError={() => setImageFailed(true)}
+      className={`inline-block shrink-0 rounded-full object-cover ${sizeClass}`}
+    />
+  ) : (
+    <div
+      className={`inline-grid shrink-0 place-items-center rounded-full bg-[#10213d] font-semibold text-white ${sizeClass}`}
+      aria-label={name}
+    >
+      {initials(name)}
+    </div>
+  );
+};
 
 export const BlogCard = ({ blog, featured = false }: { blog: Blog; featured?: boolean }) => {
   const [saved, setSaved] = useState(Boolean(blog.saved));
@@ -155,7 +178,7 @@ export const BlogCard = ({ blog, featured = false }: { blog: Blog; featured?: bo
 };
 const AuthorLine = ({ blog }: { blog: Blog }) => (
   <div className="flex min-w-0 items-center gap-2.5">
-    <Avatar name={blog.author.name || 'Anonymous'} />
+    <Avatar name={blog.author.name || 'Anonymous'} avatarUrl={blog.author.avatarUrl} />
     <div className="min-w-0 text-xs">
       <p className="truncate font-semibold">{blog.author.name || 'Anonymous'}</p>
       <p className="text-[var(--muted)]">

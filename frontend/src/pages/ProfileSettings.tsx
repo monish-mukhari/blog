@@ -2,6 +2,7 @@ import axios from 'axios';
 import { FormEvent, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AppBar } from '../components/AppBar';
+import { Icon } from '../components/Icon';
 import { ImageUploader } from '../components/ImageUploader';
 import { BACKEND_URL } from '../config';
 
@@ -104,15 +105,23 @@ export const ProfileSettings = () => {
           </div>
           <label className="block text-sm font-semibold">
             Email digest
-            <select
-              value={form.digestFrequency}
-              onChange={(event) => update('digestFrequency', event.target.value)}
-              className="mt-2 w-full rounded-lg border border-[var(--line)] bg-white p-3 font-normal"
-            >
-              <option value="off">Off</option>
-              <option value="daily">Daily</option>
-              <option value="weekly">Weekly</option>
-            </select>
+            <span className="relative mt-2 block">
+              <select
+                value={form.digestFrequency}
+                onChange={(event) => update('digestFrequency', event.target.value)}
+                className="w-full appearance-none rounded-lg border border-[var(--line)] bg-white py-3 pl-3 pr-12 font-normal outline-none focus:border-[#2563eb]"
+              >
+                <option value="off">Off</option>
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+              </select>
+              <span
+                className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[var(--muted)]"
+                aria-hidden="true"
+              >
+                <Icon name="chevronDown" size={17} />
+              </span>
+            </span>
           </label>
           <div className="flex items-center justify-between">
             <p role="status" className="text-sm text-[var(--muted)]">
