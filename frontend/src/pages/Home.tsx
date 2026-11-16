@@ -13,7 +13,7 @@ export const Home = () => (
       <nav className="flex items-center gap-3">
         <Link
           to="/signin"
-          className="hidden rounded-lg px-4 py-2 text-sm font-semibold hover:bg-[#eff6ff] sm:block"
+          className="focus-ring hidden rounded-lg px-4 py-2 text-sm font-semibold transition-colors hover:bg-[var(--surface)] hover:text-[#2563eb] sm:block"
         >
           Sign in
         </Link>
