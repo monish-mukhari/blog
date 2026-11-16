@@ -16,6 +16,20 @@
   --line: #d9e3f3;
   --blue: #2563eb;
   --coral: #2563eb;
+  --panel: #ffffff;
+  --header: rgb(255 255 255 / 0.95);
+}
+
+html.dark {
+  --ink: #dedbd5;
+  --muted: #aaa59d;
+  --paper: #15191a;
+  --surface: #191d1e;
+  --panel: #181c1d;
+  --header: rgb(21 25 26 / 0.95);
+  --line: #263e5e;
+  color: var(--ink);
+  background: var(--paper);
 }
 
 * {
@@ -29,11 +43,20 @@ body {
   min-width: 320px;
   min-height: 100vh;
   background: var(--paper);
+  color: var(--ink);
+  transition:
+    background-color 180ms ease,
+    color 180ms ease;
 }
 button,
 input,
 textarea {
   font: inherit;
+}
+input,
+textarea,
+select {
+  color: var(--ink);
 }
 button,
 a {
@@ -45,6 +68,52 @@ button {
 ::selection {
   background: #bfdbfe;
   color: #10213d;
+}
+
+html.dark ::selection {
+  background: #1d4ed8;
+  color: #ffffff;
+}
+
+/* Tailwind's literal light surfaces are mapped onto the dark palette. Brand blues,
+   illustrations and code blocks deliberately keep their original colors. */
+html.dark [class~='bg-white'],
+html.dark [class~='bg-white/95'],
+html.dark [class~='bg-[#fffefa]'],
+html.dark [class~='bg-[#f5f8ff]'] {
+  background-color: var(--panel) !important;
+}
+html.dark [class~='bg-[#eff6ff]'] {
+  background-color: #17233a !important;
+}
+html.dark [class~='hover:bg-white']:hover,
+html.dark [class~='focus:bg-white']:focus {
+  background-color: #202526 !important;
+}
+html.dark [class~='text-[#10213d]'],
+html.dark [class~='text-[#64748b]'] {
+  color: var(--ink) !important;
+}
+html.dark [class~='border-[#d9e3f3]'],
+html.dark [class~='border-[#bfdbfe]'] {
+  border-color: var(--line) !important;
+}
+html.dark [class~='bg-black/5'] {
+  background-color: rgb(255 255 255 / 0.05) !important;
+}
+html.dark [class~='bg-black/10'] {
+  background-color: rgb(255 255 255 / 0.1) !important;
+}
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: #777b7d;
+}
+html.dark select option {
+  background: var(--panel);
+  color: var(--ink);
+}
+html.dark .markdown-article :not(pre) > code {
+  background: #17233a;
 }
 
 /* Controls use a firm, rectangular Medium-inspired shape. Decorative circles stay circular. */

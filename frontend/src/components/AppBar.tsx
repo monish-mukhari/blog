@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Icon } from './Icon';
+import { AppearanceDialog } from './AppearanceDialog';
 
 interface AppBarProps {
   search?: string;
@@ -9,13 +10,9 @@ interface AppBarProps {
 
 export const AppBar = ({ search, onSearch }: AppBarProps) => {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [appearanceOpen, setAppearanceOpen] = useState(false);
   const navigate = useNavigate();
   const signedIn = Boolean(localStorage.getItem('token'));
-
-  useEffect(() => {
-    document.documentElement.classList.remove('dark');
-    localStorage.setItem('theme', 'light');
-  }, []);
 
   const signOut = () => {
     localStorage.removeItem('token');
@@ -24,7 +21,7 @@ export const AppBar = ({ search, onSearch }: AppBarProps) => {
   };
 
   return (
-    <header className="sticky top-0 z-40 border-b border-[var(--line)] bg-white/95 backdrop-blur-xl">
+    <header className="sticky top-0 z-40 border-b border-[var(--line)] bg-[var(--header)] backdrop-blur-xl">
       <div className="container-main flex h-[72px] items-center justify-between gap-5">
         <Link to="/blogs" className="focus-ring flex items-center gap-2 rounded-lg" aria-label="Inkwell home">
           <span className="grid h-9 w-9 place-items-center rounded-lg bg-[#2563eb] text-xl font-bold text-white font-display">
@@ -49,7 +46,7 @@ export const AppBar = ({ search, onSearch }: AppBarProps) => {
           <button
             type="button"
             onClick={() => setMenuOpen((current) => !current)}
-            className="focus-ring grid h-10 w-10 place-items-center rounded-lg border border-[var(--line)] bg-white text-[#2563eb]"
+            className="focus-ring grid h-10 w-10 place-items-center rounded-lg border border-[var(--line)] bg-[var(--panel)] text-[#2563eb]"
             aria-label={menuOpen ? 'Close account menu' : 'Open account menu'}
             aria-expanded={menuOpen}
           >
@@ -59,7 +56,7 @@ export const AppBar = ({ search, onSearch }: AppBarProps) => {
       </div>
 
       {menuOpen && (
-        <div className="absolute right-5 top-[64px] w-52 rounded-xl border border-[var(--line)] bg-white p-2 shadow-xl animate-in">
+        <div className="absolute right-5 top-[64px] w-60 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-2 shadow-xl animate-in">
           {signedIn ? (
             <>
               <Link
@@ -107,6 +104,12 @@ export const AppBar = ({ search, onSearch }: AppBarProps) => {
               >
                 Profile settings
               </Link>
+              <AppearanceButton
+                onClick={() => {
+                  setMenuOpen(false);
+                  setAppearanceOpen(true);
+                }}
+              />
               <button
                 type="button"
                 onClick={signOut}
@@ -117,6 +120,12 @@ export const AppBar = ({ search, onSearch }: AppBarProps) => {
             </>
           ) : (
             <>
+              <AppearanceButton
+                onClick={() => {
+                  setMenuOpen(false);
+                  setAppearanceOpen(true);
+                }}
+              />
               <Link
                 to="/signin"
                 className="block rounded-lg px-3 py-2.5 text-sm font-semibold hover:bg-[var(--surface)]"
@@ -133,6 +142,12 @@ export const AppBar = ({ search, onSearch }: AppBarProps) => {
           )}
         </div>
       )}
+
+      <AppearanceDialog
+        open={appearanceOpen}
+        onClose={() => setAppearanceOpen(false)}
+        hasMobileSearch={Boolean(onSearch)}
+      />
 
       {onSearch && (
         <div className="container-main pb-3 md:hidden">
@@ -163,6 +178,17 @@ const SearchInput = ({ value, onChange, className = '' }: SearchInputProps) => (
       aria-label="Search stories"
     />
   </label>
+);
+
+const AppearanceButton = ({ onClick }: { onClick: () => void }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm hover:bg-[var(--surface)]"
+  >
+    <Icon name="sun" size={17} />
+    Appearance
+  </button>
 );
 
 export const LogoBar = () => (
