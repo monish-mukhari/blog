@@ -35,7 +35,7 @@ stateDiagram-v2
 
 ### New stories
 
-A new story begins as an account-synced draft. Publishing assigns its readable slug and publication timestamp. Scheduling assigns a future timestamp; the Cloudflare Worker cron checks due stories every five minutes.
+A new story begins as an account-synced draft. Publishing assigns its readable slug and publication timestamp. Scheduling assigns a future timestamp. The Cloudflare Worker checks for due stories at the start of each UTC hour.
 
 ### Editing published stories safely
 
